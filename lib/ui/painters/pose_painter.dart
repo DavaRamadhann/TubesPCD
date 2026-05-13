@@ -49,6 +49,14 @@ class PosePainter extends CustomPainter {
     drawLine(PoseLandmarkType.rightShoulder, PoseLandmarkType.rightHip);
     drawLine(PoseLandmarkType.leftHip, PoseLandmarkType.rightHip);
 
+    // Draw left arm
+    drawLine(PoseLandmarkType.leftShoulder, PoseLandmarkType.leftElbow);
+    drawLine(PoseLandmarkType.leftElbow, PoseLandmarkType.leftWrist);
+
+    // Draw right arm
+    drawLine(PoseLandmarkType.rightShoulder, PoseLandmarkType.rightElbow);
+    drawLine(PoseLandmarkType.rightElbow, PoseLandmarkType.rightWrist);
+
     // Draw points
     final pointPaint = Paint()
       ..color = Colors.white

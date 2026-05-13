@@ -5,6 +5,8 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'data/local/hive_service.dart';
 import 'providers/squat_provider.dart';
+import 'providers/situp_provider.dart';
+import 'providers/pushup_provider.dart';
 import 'ui/screens/home_screen.dart';
 
 void main() async {
@@ -28,9 +30,11 @@ class MyApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => SquatProvider()),
+        ChangeNotifierProvider(create: (_) => SitUpProvider()),
+        ChangeNotifierProvider(create: (_) => PushUpProvider()),
       ],
       child: MaterialApp(
-        title: 'Squat Counter AI',
+        title: 'Workout Counter AI',
         theme: ThemeData(
           primarySwatch: Colors.blue,
           useMaterial3: true,

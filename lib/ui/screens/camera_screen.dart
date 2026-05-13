@@ -1,16 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:camera/camera.dart';
 import 'package:provider/provider.dart';
+import 'package:google_mlkit_pose_detection/google_mlkit_pose_detection.dart';
 import 'dart:io';
 
+import '../../core/constants/exercise_type.dart';
 import '../../services/pose_inference_service.dart';
 import '../../providers/squat_provider.dart';
+import '../../providers/situp_provider.dart';
+import '../../providers/pushup_provider.dart';
 import '../painters/pose_painter.dart';
 
 class CameraScreen extends StatefulWidget {
   final List<CameraDescription> cameras;
+  final ExerciseType exerciseType;
 
-  const CameraScreen({Key? key, required this.cameras}) : super(key: key);
+  const CameraScreen({
+    Key? key,
+    required this.cameras,
+    required this.exerciseType,
+  }) : super(key: key);
 
   @override
   State<CameraScreen> createState() => _CameraScreenState();
@@ -19,7 +29,9 @@ class CameraScreen extends StatefulWidget {
 class _CameraScreenState extends State<CameraScreen> {
   CameraController? _controller;
   late PoseInferenceService _inferenceService;
-  int _cameraIndex = 1; 
+  int _cameraIndex = 1;
+  bool _isLandscape = false;
+  DeviceOrientation _deviceOrientation = DeviceOrientation.portraitUp;
   
   @override
   void initState() {
@@ -33,8 +45,47 @@ class _CameraScreenState extends State<CameraScreen> {
     }
     
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<SquatProvider>().reset();
+      _resetProvider();
     });
+  }
+
+  void _resetProvider() {
+    switch (widget.exerciseType) {
+      case ExerciseType.squat:
+        context.read<SquatProvider>().reset();
+        break;
+      case ExerciseType.sitUp:
+        context.read<SitUpProvider>().reset();
+        break;
+      case ExerciseType.pushUp:
+        context.read<PushUpProvider>().reset();
+        break;
+    }
+  }
+
+  void _processPose(pose) {
+    switch (widget.exerciseType) {
+      case ExerciseType.squat:
+        context.read<SquatProvider>().processPose(pose);
+        break;
+      case ExerciseType.sitUp:
+        context.read<SitUpProvider>().processPose(pose);
+        break;
+      case ExerciseType.pushUp:
+        context.read<PushUpProvider>().processPose(pose);
+        break;
+    }
+  }
+
+  int _getRepCount() {
+    switch (widget.exerciseType) {
+      case ExerciseType.squat:
+        return context.read<SquatProvider>().repCount;
+      case ExerciseType.sitUp:
+        return context.read<SitUpProvider>().repCount;
+      case ExerciseType.pushUp:
+        return context.read<PushUpProvider>().repCount;
+    }
   }
 
   Future<void> _initializeCamera(CameraDescription cameraDescription) async {
@@ -52,11 +103,13 @@ class _CameraScreenState extends State<CameraScreen> {
       await _controller!.startImageStream((CameraImage image) async {
         final poses = await _inferenceService.processCameraImage(
           image, 
-          cameraDescription.sensorOrientation
+          cameraDescription.sensorOrientation,
+          cameraDescription.lensDirection,
+          _deviceOrientation,
         );
         
         if (poses.isNotEmpty && mounted) {
-          context.read<SquatProvider>().processPose(poses.first);
+          _processPose(poses.first);
         }
       });
       
@@ -66,12 +119,103 @@ class _CameraScreenState extends State<CameraScreen> {
     }
   }
 
+  void _toggleOrientation() {
+    setState(() {
+      _isLandscape = !_isLandscape;
+      _deviceOrientation = _isLandscape
+          ? DeviceOrientation.landscapeLeft
+          : DeviceOrientation.portraitUp;
+    });
+
+    if (_isLandscape) {
+      SystemChrome.setPreferredOrientations([
+        DeviceOrientation.landscapeLeft,
+        DeviceOrientation.landscapeRight,
+      ]);
+    } else {
+      SystemChrome.setPreferredOrientations([
+        DeviceOrientation.portraitUp,
+      ]);
+    }
+  }
+
   @override
   void dispose() {
+    // Kembalikan ke portrait saat keluar dari kamera
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+    ]);
     _controller?.stopImageStream();
     _controller?.dispose();
     _inferenceService.dispose();
     super.dispose();
+  }
+
+  // --- Helper getters untuk data dari provider aktif ---
+  String _getStatus(BuildContext context) {
+    switch (widget.exerciseType) {
+      case ExerciseType.squat:
+        return context.select<SquatProvider, String>((p) => p.status);
+      case ExerciseType.sitUp:
+        return context.select<SitUpProvider, String>((p) => p.status);
+      case ExerciseType.pushUp:
+        return context.select<PushUpProvider, String>((p) => p.status);
+    }
+  }
+
+  int _getReps(BuildContext context) {
+    switch (widget.exerciseType) {
+      case ExerciseType.squat:
+        return context.select<SquatProvider, int>((p) => p.repCount);
+      case ExerciseType.sitUp:
+        return context.select<SitUpProvider, int>((p) => p.repCount);
+      case ExerciseType.pushUp:
+        return context.select<PushUpProvider, int>((p) => p.repCount);
+    }
+  }
+
+  double _getAngle(BuildContext context) {
+    switch (widget.exerciseType) {
+      case ExerciseType.squat:
+        return context.select<SquatProvider, double>((p) => p.kneeAngle);
+      case ExerciseType.sitUp:
+        return context.select<SitUpProvider, double>((p) => p.bodyAngle);
+      case ExerciseType.pushUp:
+        return context.select<PushUpProvider, double>((p) => p.elbowAngle);
+    }
+  }
+
+  bool _getIsGoodPosture(BuildContext context) {
+    switch (widget.exerciseType) {
+      case ExerciseType.squat:
+        return context.select<SquatProvider, bool>((p) => p.isGoodPosture);
+      case ExerciseType.sitUp:
+        return context.select<SitUpProvider, bool>((p) => p.isGoodPosture);
+      case ExerciseType.pushUp:
+        return context.select<PushUpProvider, bool>((p) => p.isGoodPosture);
+    }
+  }
+
+  bool _getHasStarted(BuildContext context) {
+    switch (widget.exerciseType) {
+      case ExerciseType.squat:
+        return context.select<SquatProvider, bool>((p) => p.hasStarted);
+      case ExerciseType.sitUp:
+        return context.select<SitUpProvider, bool>((p) => p.hasStarted);
+      case ExerciseType.pushUp:
+        return context.select<PushUpProvider, bool>((p) => p.hasStarted);
+    }
+  }
+
+  Pose? _getCurrentPose(BuildContext context) {
+    switch (widget.exerciseType) {
+      case ExerciseType.squat:
+        return context.select<SquatProvider, Pose?>((p) => p.currentPose);
+      case ExerciseType.sitUp:
+        return context.select<SitUpProvider, Pose?>((p) => p.currentPose);
+      case ExerciseType.pushUp:
+        return context.select<PushUpProvider, Pose?>((p) => p.currentPose);
+    }
   }
 
   @override
@@ -80,7 +224,12 @@ class _CameraScreenState extends State<CameraScreen> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    final squatProvider = context.watch<SquatProvider>();
+    final status = _getStatus(context);
+    final reps = _getReps(context);
+    final angle = _getAngle(context);
+    final isGoodPosture = _getIsGoodPosture(context);
+    final hasStarted = _getHasStarted(context);
+    final currentPose = _getCurrentPose(context);
     
     final bool isPortrait = MediaQuery.of(context).orientation == Orientation.portrait;
     final Size imageSize = isPortrait
@@ -88,7 +237,16 @@ class _CameraScreenState extends State<CameraScreen> {
         : Size(_controller!.value.previewSize!.width, _controller!.value.previewSize!.height);
     
     return Scaffold(
-      appBar: AppBar(title: const Text("Squat Counter")),
+      appBar: AppBar(
+        title: Text("${widget.exerciseType.label} Counter"),
+        actions: [
+          IconButton(
+            onPressed: _toggleOrientation,
+            icon: Icon(_isLandscape ? Icons.stay_current_portrait : Icons.stay_current_landscape),
+            tooltip: _isLandscape ? 'Mode Portrait' : 'Mode Landscape',
+          ),
+        ],
+      ),
       body: Stack(
         fit: StackFit.expand,
         children: [
@@ -101,17 +259,17 @@ class _CameraScreenState extends State<CameraScreen> {
                 fit: StackFit.expand,
                 children: [
                   CameraPreview(_controller!),
-                  if (!squatProvider.hasStarted)
+                  if (!hasStarted)
                     CustomPaint(
-                      painter: SilhouettePainter(),
+                      painter: _getSilhouettePainter(),
                       size: Size.infinite,
                     ),
-                  if (squatProvider.currentPose != null)
+                  if (currentPose != null)
                     CustomPaint(
                       painter: PosePainter(
-                        squatProvider.currentPose!,
+                        currentPose,
                         imageSize,
-                        squatProvider.isGoodPosture,
+                        isGoodPosture,
                       ),
                     ),
                 ],
@@ -121,7 +279,7 @@ class _CameraScreenState extends State<CameraScreen> {
           Positioned(
             top: 20,
             left: 20,
-            child: _buildOverlayUI(squatProvider),
+            child: _buildOverlayUI(status, reps, angle, isGoodPosture),
           ),
           Positioned(
             bottom: 30,
@@ -130,7 +288,7 @@ class _CameraScreenState extends State<CameraScreen> {
             child: Center(
               child: ElevatedButton.icon(
                 onPressed: () {
-                  Navigator.pop(context, squatProvider.repCount);
+                  Navigator.pop(context, _getRepCount());
                 },
                 icon: const Icon(Icons.stop),
                 label: const Text("Selesai Latihan"),
@@ -147,7 +305,18 @@ class _CameraScreenState extends State<CameraScreen> {
     );
   }
 
-  Widget _buildOverlayUI(SquatProvider provider) {
+  CustomPainter _getSilhouettePainter() {
+    switch (widget.exerciseType) {
+      case ExerciseType.squat:
+        return SquatSilhouettePainter();
+      case ExerciseType.sitUp:
+        return SitUpSilhouettePainter();
+      case ExerciseType.pushUp:
+        return PushUpSilhouettePainter();
+    }
+  }
+
+  Widget _buildOverlayUI(String status, int reps, double angle, bool isGoodPosture) {
     return Container(
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
@@ -158,21 +327,21 @@ class _CameraScreenState extends State<CameraScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            "Reps: ${provider.repCount}", 
+            "Reps: $reps", 
             style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)
           ),
           const SizedBox(height: 5),
           Text(
-            provider.status, 
+            status, 
             style: TextStyle(
-              color: provider.isGoodPosture ? Colors.greenAccent : Colors.yellowAccent, 
+              color: isGoodPosture ? Colors.greenAccent : Colors.yellowAccent, 
               fontSize: 18,
               fontWeight: FontWeight.bold
             )
           ),
           const SizedBox(height: 5),
           Text(
-            "Sudut Lutut: ${provider.kneeAngle.toStringAsFixed(0)}°", 
+            "${widget.exerciseType.angleLabel}: ${angle.toStringAsFixed(0)}°", 
             style: const TextStyle(color: Colors.grey, fontSize: 14)
           ),
         ],
@@ -181,7 +350,9 @@ class _CameraScreenState extends State<CameraScreen> {
   }
 }
 
-class SilhouettePainter extends CustomPainter {
+// --- Siluet panduan untuk setiap exercise ---
+
+class SquatSilhouettePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
@@ -211,3 +382,92 @@ class SilhouettePainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
+class SitUpSilhouettePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white.withOpacity(0.5)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 6
+      ..strokeCap = StrokeCap.round;
+
+    final centerY = size.height * 0.65;
+    
+    // Kepala (di kiri, rebahan)
+    canvas.drawCircle(Offset(size.width * 0.2, centerY - size.height * 0.03), size.height * 0.04, paint);
+    
+    // Badan (horizontal, dari kepala ke pinggul)
+    canvas.drawLine(
+      Offset(size.width * 0.25, centerY),
+      Offset(size.width * 0.55, centerY),
+      paint,
+    );
+    
+    // Kaki — ditekuk (lutut ke atas, kaki ke bawah)
+    canvas.drawLine(
+      Offset(size.width * 0.55, centerY),
+      Offset(size.width * 0.65, centerY - size.height * 0.12),
+      paint,
+    );
+    canvas.drawLine(
+      Offset(size.width * 0.65, centerY - size.height * 0.12),
+      Offset(size.width * 0.7, centerY + size.height * 0.02),
+      paint,
+    );
+    
+    // Tangan di belakang kepala
+    canvas.drawLine(
+      Offset(size.width * 0.3, centerY),
+      Offset(size.width * 0.22, centerY - size.height * 0.05),
+      paint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class PushUpSilhouettePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white.withOpacity(0.5)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 6
+      ..strokeCap = StrokeCap.round;
+
+    final bodyY = size.height * 0.55;
+    
+    // Kepala
+    canvas.drawCircle(Offset(size.width * 0.22, bodyY - size.height * 0.06), size.height * 0.035, paint);
+    
+    // Badan (horizontal — dari shoulder ke hip)
+    canvas.drawLine(
+      Offset(size.width * 0.25, bodyY),
+      Offset(size.width * 0.65, bodyY),
+      paint,
+    );
+    
+    // Kaki (hip ke ankle, sedikit miring ke bawah)
+    canvas.drawLine(
+      Offset(size.width * 0.65, bodyY),
+      Offset(size.width * 0.85, bodyY + size.height * 0.03),
+      paint,
+    );
+    
+    // Tangan (shoulder ke bawah — posisi push-up)
+    canvas.drawLine(
+      Offset(size.width * 0.25, bodyY),
+      Offset(size.width * 0.28, bodyY + size.height * 0.1),
+      paint,
+    );
+    canvas.drawLine(
+      Offset(size.width * 0.28, bodyY + size.height * 0.1),
+      Offset(size.width * 0.3, bodyY + size.height * 0.15),
+      paint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}

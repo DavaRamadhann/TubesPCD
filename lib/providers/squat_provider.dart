@@ -40,8 +40,11 @@ class SquatProvider extends ChangeNotifier {
     _currentPose = pose;
 
     final leftShoulder = pose.landmarks[PoseLandmarkType.leftShoulder];
+    final rightShoulder = pose.landmarks[PoseLandmarkType.rightShoulder];
     final leftHip = pose.landmarks[PoseLandmarkType.leftHip];
+    final rightHip = pose.landmarks[PoseLandmarkType.rightHip];
     final leftKnee = pose.landmarks[PoseLandmarkType.leftKnee];
+    final rightKnee = pose.landmarks[PoseLandmarkType.rightKnee];
     final leftAnkle = pose.landmarks[PoseLandmarkType.leftAnkle];
     final rightAnkle = pose.landmarks[PoseLandmarkType.rightAnkle];
 
@@ -49,6 +52,7 @@ class SquatProvider extends ChangeNotifier {
     final maxAngle = EnvConfig.squatMaxAngle;
     final threshold = EnvConfig.aiConfidenceThreshold;
 
+    // --- Validasi landmark minimum ---
     if (leftShoulder == null || leftHip == null || leftKnee == null || leftAnkle == null) {
       _status = "Tubuh tidak terlihat utuh";
       _isGoodPosture = false;
@@ -63,26 +67,61 @@ class SquatProvider extends ChangeNotifier {
       return;
     }
 
-    // --- ANTI-TIDURAN / REBAHAN HACK ---
-    // 1. Bahu harus di atas pinggul, dan pinggul harus di atas engkel (Y semakin besar ke bawah layar)
-    if (leftShoulder.y >= leftHip.y || leftHip.y >= leftAnkle.y) {
-       _status = "Berdirilah dengan tegak (Posisi salah)";
+    // =============================================
+    // ANTI-TIDURAN / REBAHAN — MULTI-LAYER CHECK
+    // =============================================
+
+    // CHECK 1: Urutan segmen vertikal ketat (Y semakin besar ke bawah layar)
+    // Bahu HARUS di atas pinggul, pinggul HARUS di atas lutut
+    // (ankle boleh lebih tinggi saat squat dalam)
+    if (leftShoulder.y >= leftHip.y || leftHip.y >= leftKnee.y) {
+       _status = "Berdirilah dengan tegak!";
        _isGoodPosture = false;
        notifyListeners();
        return;
     }
 
-    // 2. Pastikan tubuh orang tersebut dominan vertikal, bukan rebahan horizontal di layar
-    final verticalBodyLength = (leftAnkle.y - leftShoulder.y).abs();
-    final horizontalBodyLength = (leftAnkle.x - leftShoulder.x).abs();
-    
-    if (verticalBodyLength < horizontalBodyLength * 0.5) {
+    // CHECK 2: Sudut torso terhadap garis vertikal
+    // Torso = garis dari hip ke shoulder. Saat berdiri, torso hampir vertikal.
+    // Saat tiduran, torso hampir horizontal.
+    final torsoAngleFromVertical = _calculateTorsoAngle(leftShoulder, leftHip);
+    if (torsoAngleFromVertical > 50.0) {
+       _status = "Badan terlalu miring! Berdiri tegak.";
+       _isGoodPosture = false;
+       notifyListeners();
+       return;
+    }
+
+    // CHECK 3: Rasio aspek tubuh — tinggi vertikal harus DOMINAN vs lebar horizontal
+    // Menggunakan titik tertinggi (bahu) dan terendah (ankle) untuk body span
+    final bodyTopY = math.min(leftShoulder.y, rightShoulder?.y ?? leftShoulder.y);
+    final bodyBottomY = math.max(leftAnkle.y, rightAnkle?.y ?? leftAnkle.y);
+    final bodyLeftX = math.min(leftShoulder.x, leftAnkle.x);
+    final bodyRightX = math.max(leftShoulder.x, leftAnkle.x);
+
+    final verticalSpan = (bodyBottomY - bodyTopY).abs();
+    final horizontalSpan = (bodyRightX - bodyLeftX).abs();
+
+    // Tubuh vertikal harus minimal 1.2x lebar horizontal (sebelumnya 0.5x, terlalu lemah)
+    if (verticalSpan < horizontalSpan * 1.2) {
        _status = "Tolong berdirikan badan Anda!";
        _isGoodPosture = false;
        notifyListeners();
        return;
     }
 
+    // CHECK 4: Jarak vertikal shoulder-ke-hip harus cukup signifikan
+    // (mencegah kasus orang rebahan di mana shoulder dan hip hampir sejajar Y)
+    final shoulderHipVerticalDist = (leftHip.y - leftShoulder.y).abs();
+    final shoulderHipHorizontalDist = (leftHip.x - leftShoulder.x).abs();
+    if (shoulderHipVerticalDist < shoulderHipHorizontalDist) {
+       _status = "Posisi tubuh horizontal terdeteksi!";
+       _isGoodPosture = false;
+       notifyListeners();
+       return;
+    }
+
+    // --- Kalkulasi sudut lutut ---
     final angle = _calculateAngle(leftHip, leftKnee, leftAnkle);
     _kneeAngle = angle;
 
@@ -96,6 +135,15 @@ class SquatProvider extends ChangeNotifier {
 
     _analyzeSquatState(angle, minAngle, maxAngle, currentYDistance);
     notifyListeners();
+  }
+
+  /// Menghitung sudut torso terhadap garis vertikal (0° = tegak lurus, 90° = rebahan)
+  double _calculateTorsoAngle(PoseLandmark shoulder, PoseLandmark hip) {
+    final dx = (hip.x - shoulder.x).abs();
+    final dy = (hip.y - shoulder.y).abs();
+    // atan2(horizontal, vertical) → 0° saat tegak, 90° saat rebahan
+    final radians = math.atan2(dx, dy);
+    return radians * 180 / math.pi;
   }
 
   void _analyzeSquatState(double angle, double minAngle, double maxAngle, double currentYDistance) {
