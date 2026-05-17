@@ -116,26 +116,60 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
     return Scaffold(
-      appBar: AppBar(title: const Text('Logbook Latihan')),
+      appBar: AppBar(
+        title: Text(
+          'Logbook Latihan',
+          style: theme.textTheme.titleLarge?.copyWith(
+            color: Colors.white,
+            letterSpacing: 1.2,
+          ),
+        ),
+      ),
       body: _sessions.isEmpty
-          ? const Center(child: Text("Belum ada riwayat latihan."))
+          ? Center(
+              child: Text(
+                "Belum ada riwayat latihan.",
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: Colors.white70,
+                ),
+              ),
+            )
           : ListView.builder(
+              padding: const EdgeInsets.all(16.0),
               itemCount: _sessions.length,
               itemBuilder: (context, index) {
                 final session = _sessions[index];
                 final exerciseType = _typeFromString(session.exerciseType);
-                return ListTile(
-                  leading: Icon(exerciseType.icon),
-                  title: Text("${exerciseType.label} - ${session.totalReps} Reps"),
-                  subtitle: Text(session.date.toLocal().toString().split('.')[0]),
+                return Card(
+                  color: const Color(0xFF2C2C2C),
+                  margin: const EdgeInsets.only(bottom: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: ListTile(
+                    leading: Icon(exerciseType.icon, color: theme.colorScheme.primary),
+                    title: Text(
+                      "${exerciseType.label} - ${session.totalReps} Reps",
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: Text(
+                      session.date.toLocal().toString().split('.')[0],
+                      style: const TextStyle(color: Colors.white70),
+                    ),
+                  ),
                 );
               },
             ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _showExercisePicker,
         icon: const Icon(Icons.play_arrow),
-        label: const Text('Mulai Latihan'),
+        label: const Text(
+          'MULAI LATIHAN',
+          style: TextStyle(fontFamily: 'BebasNeue', letterSpacing: 1.2),
+        ),
       ),
     );
   }

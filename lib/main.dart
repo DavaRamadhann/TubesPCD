@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import 'data/local/hive_service.dart';
 import 'providers/squat_provider.dart';
@@ -36,8 +37,71 @@ class MyApp extends StatelessWidget {
       child: MaterialApp(
         title: 'Workout Counter AI',
         theme: ThemeData(
-          primarySwatch: Colors.blue,
           useMaterial3: true,
+          scaffoldBackgroundColor: const Color(0xFF1B1B1B),
+          colorScheme: const ColorScheme.dark(
+            primary: Color(0xFFD95C27), // Burnt orange
+            secondary: Color(0xFFD95C27),
+            surface: Color(0xFF2C2C2C),
+            background: Color(0xFF1B1B1B),
+          ),
+          appBarTheme: const AppBarTheme(
+            backgroundColor: Color(0xFF1B1B1B),
+            elevation: 0,
+            iconTheme: IconThemeData(color: Colors.white),
+            titleTextStyle: TextStyle(
+              color: Colors.white,
+              fontSize: 24,
+              fontFamily: 'BebasNeue',
+              letterSpacing: 1.5,
+            ),
+          ),
+          textTheme: TextTheme(
+            displayLarge: GoogleFonts.bebasNeue(
+              color: Colors.white,
+              fontSize: 56,
+              height: 1.0,
+            ),
+            displayMedium: GoogleFonts.bebasNeue(
+              color: Colors.white,
+              fontSize: 48,
+              height: 1.0,
+            ),
+            displaySmall: GoogleFonts.bebasNeue(
+              color: Colors.white,
+              fontSize: 36,
+              height: 1.1,
+            ),
+            headlineLarge: GoogleFonts.bebasNeue(
+              color: Colors.white,
+              fontSize: 32,
+            ),
+            headlineMedium: GoogleFonts.bebasNeue(
+              color: Colors.white,
+              fontSize: 28,
+            ),
+            titleLarge: GoogleFonts.bebasNeue(
+              color: Colors.white,
+              fontSize: 24,
+              letterSpacing: 1.2,
+            ),
+            bodyLarge: GoogleFonts.inter(
+              color: Colors.white70,
+              fontSize: 16,
+            ),
+            bodyMedium: GoogleFonts.inter(
+              color: Colors.white70,
+              fontSize: 14,
+            ),
+            bodySmall: GoogleFonts.inter(
+              color: Colors.white60,
+              fontSize: 12,
+            ),
+          ),
+          floatingActionButtonTheme: const FloatingActionButtonThemeData(
+            backgroundColor: Color(0xFFD95C27),
+            foregroundColor: Colors.white,
+          ),
         ),
         home: HomeScreen(cameras: cameras),
       ),
