@@ -14,6 +14,12 @@ class SquatProvider extends ChangeNotifier {
   double _standingYDistance = 0.0;
   bool _hasStarted = false;
   
+  // Advanced PCD Features
+  double _romPercentage = 0.0;
+  String _tempoStatus = "";
+  DateTime? _phaseStartTime;
+  final List<Offset> _trajectoryPoints = [];
+
   Pose? _currentPose;
   bool _isGoodPosture = false;
 
@@ -23,6 +29,9 @@ class SquatProvider extends ChangeNotifier {
   Pose? get currentPose => _currentPose;
   bool get isGoodPosture => _isGoodPosture;
   bool get hasStarted => _hasStarted;
+  double get romPercentage => _romPercentage;
+  String get tempoStatus => _tempoStatus;
+  List<Offset> get trajectoryPoints => _trajectoryPoints;
 
   void reset() {
     _currentState = SquatState.standing;
@@ -33,6 +42,10 @@ class SquatProvider extends ChangeNotifier {
     _hasStarted = false;
     _currentPose = null;
     _isGoodPosture = false;
+    _romPercentage = 0.0;
+    _tempoStatus = "";
+    _phaseStartTime = null;
+    _trajectoryPoints.clear();
     notifyListeners();
   }
 
@@ -42,15 +55,21 @@ class SquatProvider extends ChangeNotifier {
     final leftShoulder = pose.landmarks[PoseLandmarkType.leftShoulder];
     final rightShoulder = pose.landmarks[PoseLandmarkType.rightShoulder];
     final leftHip = pose.landmarks[PoseLandmarkType.leftHip];
-    final rightHip = pose.landmarks[PoseLandmarkType.rightHip];
     final leftKnee = pose.landmarks[PoseLandmarkType.leftKnee];
-    final rightKnee = pose.landmarks[PoseLandmarkType.rightKnee];
     final leftAnkle = pose.landmarks[PoseLandmarkType.leftAnkle];
     final rightAnkle = pose.landmarks[PoseLandmarkType.rightAnkle];
 
     final minAngle = EnvConfig.squatMinAngle;
     final maxAngle = EnvConfig.squatMaxAngle;
     final threshold = EnvConfig.aiConfidenceThreshold;
+
+    // Trajectory tracking (menggunakan titik pinggul)
+    if (leftHip != null) {
+      _trajectoryPoints.add(Offset(leftHip.x, leftHip.y));
+      if (_trajectoryPoints.length > 20) {
+        _trajectoryPoints.removeAt(0);
+      }
+    }
 
     // --- Validasi landmark minimum ---
     if (leftShoulder == null || leftHip == null || leftKnee == null || leftAnkle == null) {
@@ -125,6 +144,12 @@ class SquatProvider extends ChangeNotifier {
     final angle = _calculateAngle(leftHip, leftKnee, leftAnkle);
     _kneeAngle = angle;
 
+    // --- Kalkulasi ROM (Range of Motion) ---
+    if (maxAngle - minAngle > 0) {
+      double rom = ((maxAngle - angle) / (maxAngle - minAngle)) * 100;
+      _romPercentage = rom.clamp(0.0, 100.0);
+    }
+
     double lowestAnkleY = leftAnkle.y;
     if (rightAnkle != null && rightAnkle.likelihood > threshold) {
       lowestAnkleY = math.max(lowestAnkleY, rightAnkle.y);
@@ -160,11 +185,23 @@ class SquatProvider extends ChangeNotifier {
           _isValidRep = false;
           _status = "Turun...";
           _isGoodPosture = false;
+          _phaseStartTime = DateTime.now(); // Mulai timer tempo eksentrik
+          _tempoStatus = "";
         }
         break;
 
       case SquatState.goingDown:
         if (angle <= minAngle) {
+          // Analisis Tempo Eksentrik
+          if (_phaseStartTime != null) {
+            final ms = DateTime.now().difference(_phaseStartTime!).inMilliseconds;
+            if (ms < 1200) {
+              _tempoStatus = "Terlalu Cepat!";
+            } else {
+              _tempoStatus = "Tempo Bagus";
+            }
+          }
+
           // Cek apakah pinggul benar-benar turun relatif terhadap lantai (anti-hack angkat lutut)
           if (currentYDistance < _standingYDistance * 0.75) {
             _currentState = SquatState.atBottom;
@@ -186,6 +223,7 @@ class SquatProvider extends ChangeNotifier {
         if (angle > minAngle + 15) { 
           _currentState = SquatState.comingUp;
           _status = "Naik...";
+          _phaseStartTime = DateTime.now(); // Mulai timer tempo konsentrik
         }
         break;
 

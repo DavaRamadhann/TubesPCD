@@ -2,32 +2,82 @@ import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:google_mlkit_pose_detection/google_mlkit_pose_detection.dart';
+import 'package:google_mlkit_selfie_segmentation/google_mlkit_selfie_segmentation.dart';
 import 'dart:ui';
+
+class InferenceResult {
+  final List<Pose> poses;
+  final SegmentationMask? mask;
+  final double brightness;
+
+  InferenceResult({
+    required this.poses,
+    this.mask,
+    required this.brightness,
+  });
+}
 
 class PoseInferenceService {
   final PoseDetector _poseDetector = PoseDetector(options: PoseDetectorOptions());
+  final SelfieSegmenter _segmenter = SelfieSegmenter(
+    mode: SegmenterMode.stream,
+    enableRawSizeMask: false,
+  );
+  
   bool _isProcessing = false;
 
-  Future<List<Pose>> processCameraImage(
+  Future<InferenceResult?> processCameraImage(
     CameraImage image,
     int sensorOrientation,
     CameraLensDirection lensDirection,
     DeviceOrientation deviceOrientation,
+    bool enableSegmentation,
   ) async {
-    if (_isProcessing) return [];
+    if (_isProcessing) return null;
     _isProcessing = true;
     
     try {
       final inputImage = _inputImageFromCameraImage(
         image, sensorOrientation, lensDirection, deviceOrientation,
       );
-      if (inputImage == null) return [];
+      if (inputImage == null) return null;
       
       final poses = await _poseDetector.processImage(inputImage);
-      return poses;
+      SegmentationMask? mask;
+      
+      if (enableSegmentation) {
+        mask = await _segmenter.processImage(inputImage);
+      }
+      
+      final brightness = _calculateBrightness(image);
+      
+      return InferenceResult(
+        poses: poses,
+        mask: mask,
+        brightness: brightness,
+      );
     } finally {
       _isProcessing = false;
     }
+  }
+
+  double _calculateBrightness(CameraImage image) {
+    if (image.planes.isEmpty) return 255.0;
+    
+    final bytes = image.planes[0].bytes;
+    if (bytes.isEmpty) return 255.0;
+
+    int total = 0;
+    int sampleStep = (bytes.length / 1000).ceil(); 
+    if (sampleStep < 1) sampleStep = 1;
+    
+    int count = 0;
+    for (int i = 0; i < bytes.length; i += sampleStep) {
+      total += bytes[i];
+      count++;
+    }
+    
+    return count > 0 ? (total / count) : 255.0;
   }
 
   InputImage? _inputImageFromCameraImage(
@@ -36,7 +86,6 @@ class PoseInferenceService {
     CameraLensDirection lensDirection,
     DeviceOrientation deviceOrientation,
   ) {
-    // Hitung rotasi berdasarkan orientasi device + sensor
     int deviceOrientationDegrees;
     switch (deviceOrientation) {
       case DeviceOrientation.portraitUp:
@@ -64,7 +113,6 @@ class PoseInferenceService {
         ?? InputImageRotation.rotation0deg;
     
     final format = InputImageFormatValue.fromRawValue(image.format.raw);
-    // Jika tidak valid secara raw, kita asumsikan NV21 untuk Android, BGRA8888 untuk iOS
     final fallbackFormat = defaultTargetPlatform == TargetPlatform.iOS 
         ? InputImageFormat.bgra8888 
         : InputImageFormat.nv21;
@@ -88,5 +136,6 @@ class PoseInferenceService {
 
   void dispose() {
     _poseDetector.close();
+    _segmenter.close();
   }
 }

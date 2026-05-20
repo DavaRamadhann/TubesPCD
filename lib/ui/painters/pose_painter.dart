@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:google_mlkit_pose_detection/google_mlkit_pose_detection.dart';
+import 'package:google_mlkit_selfie_segmentation/google_mlkit_selfie_segmentation.dart';
 
 class PosePainter extends CustomPainter {
   final Pose pose;
   final Size absoluteImageSize;
   final bool isGoodPosture;
+  final List<Offset> trajectory;
+  final SegmentationMask? mask;
 
-  PosePainter(this.pose, this.absoluteImageSize, this.isGoodPosture);
+  PosePainter(this.pose, this.absoluteImageSize, this.isGoodPosture, [this.trajectory = const [], this.mask]);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -21,6 +24,21 @@ class PosePainter extends CustomPainter {
     Offset translate(double x, double y) {
       // Mirroring for front camera
       return Offset(size.width - (x * scaleX), y * scaleY);
+    }
+
+    if (trajectory.isNotEmpty) {
+      final trajPaint = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3.0
+        ..color = Colors.blueAccent.withOpacity(0.5);
+        
+      for (int i = 0; i < trajectory.length - 1; i++) {
+        canvas.drawLine(
+          translate(trajectory[i].dx, trajectory[i].dy),
+          translate(trajectory[i+1].dx, trajectory[i+1].dy),
+          trajPaint,
+        );
+      }
     }
 
     void drawLine(PoseLandmarkType type1, PoseLandmarkType type2) {
@@ -69,6 +87,9 @@ class PosePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant PosePainter oldDelegate) {
-    return oldDelegate.pose != pose || oldDelegate.isGoodPosture != isGoodPosture;
+    return oldDelegate.pose != pose || 
+           oldDelegate.isGoodPosture != isGoodPosture ||
+           oldDelegate.trajectory.length != trajectory.length ||
+           oldDelegate.mask != mask;
   }
 }

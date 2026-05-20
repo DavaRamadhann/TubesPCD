@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:camera/camera.dart';
 import 'package:provider/provider.dart';
 import 'package:google_mlkit_pose_detection/google_mlkit_pose_detection.dart';
+import 'package:google_mlkit_selfie_segmentation/google_mlkit_selfie_segmentation.dart';
 import 'dart:io';
 
 import '../../core/constants/exercise_type.dart';
@@ -32,6 +33,10 @@ class _CameraScreenState extends State<CameraScreen> {
   int _cameraIndex = 1;
   bool _isLandscape = false;
   DeviceOrientation _deviceOrientation = DeviceOrientation.portraitUp;
+  
+  bool _enableSegmentation = false;
+  SegmentationMask? _currentMask;
+  double _brightness = 255.0;
   
   @override
   void initState() {
@@ -63,7 +68,7 @@ class _CameraScreenState extends State<CameraScreen> {
     }
   }
 
-  void _processPose(pose) {
+  void _processPose(Pose pose) {
     switch (widget.exerciseType) {
       case ExerciseType.squat:
         context.read<SquatProvider>().processPose(pose);
@@ -101,15 +106,23 @@ class _CameraScreenState extends State<CameraScreen> {
       if (!mounted) return;
       
       await _controller!.startImageStream((CameraImage image) async {
-        final poses = await _inferenceService.processCameraImage(
+        final result = await _inferenceService.processCameraImage(
           image, 
           cameraDescription.sensorOrientation,
           cameraDescription.lensDirection,
           _deviceOrientation,
+          _enableSegmentation,
         );
         
-        if (poses.isNotEmpty && mounted) {
-          _processPose(poses.first);
+        if (result != null && mounted) {
+          setState(() {
+            _brightness = result.brightness;
+            _currentMask = result.mask;
+          });
+          
+          if (result.poses.isNotEmpty) {
+            _processPose(result.poses.first);
+          }
         }
       });
       
@@ -218,6 +231,30 @@ class _CameraScreenState extends State<CameraScreen> {
     }
   }
 
+  double _getRom(BuildContext context) {
+    switch (widget.exerciseType) {
+      case ExerciseType.squat: return context.select<SquatProvider, double>((p) => p.romPercentage);
+      case ExerciseType.sitUp: return context.select<SitUpProvider, double>((p) => p.romPercentage);
+      case ExerciseType.pushUp: return context.select<PushUpProvider, double>((p) => p.romPercentage);
+    }
+  }
+  
+  String _getTempo(BuildContext context) {
+    switch (widget.exerciseType) {
+      case ExerciseType.squat: return context.select<SquatProvider, String>((p) => p.tempoStatus);
+      case ExerciseType.sitUp: return context.select<SitUpProvider, String>((p) => p.tempoStatus);
+      case ExerciseType.pushUp: return context.select<PushUpProvider, String>((p) => p.tempoStatus);
+    }
+  }
+
+  List<Offset> _getTrajectory(BuildContext context) {
+    switch (widget.exerciseType) {
+      case ExerciseType.squat: return context.select<SquatProvider, List<Offset>>((p) => p.trajectoryPoints);
+      case ExerciseType.sitUp: return context.select<SitUpProvider, List<Offset>>((p) => p.trajectoryPoints);
+      case ExerciseType.pushUp: return context.select<PushUpProvider, List<Offset>>((p) => p.trajectoryPoints);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_controller == null || !_controller!.value.isInitialized) {
@@ -230,6 +267,9 @@ class _CameraScreenState extends State<CameraScreen> {
     final isGoodPosture = _getIsGoodPosture(context);
     final hasStarted = _getHasStarted(context);
     final currentPose = _getCurrentPose(context);
+    final rom = _getRom(context);
+    final tempo = _getTempo(context);
+    final trajectory = _getTrajectory(context);
     
     final bool isPortrait = MediaQuery.of(context).orientation == Orientation.portrait;
     final Size imageSize = isPortrait
@@ -240,6 +280,15 @@ class _CameraScreenState extends State<CameraScreen> {
       appBar: AppBar(
         title: Text("${widget.exerciseType.label} Counter"),
         actions: [
+          IconButton(
+            onPressed: () {
+              setState(() {
+                _enableSegmentation = !_enableSegmentation;
+              });
+            },
+            icon: Icon(_enableSegmentation ? Icons.blur_on : Icons.blur_off),
+            tooltip: 'Toggle Blur Background',
+          ),
           IconButton(
             onPressed: _toggleOrientation,
             icon: Icon(_isLandscape ? Icons.stay_current_portrait : Icons.stay_current_landscape),
@@ -270,6 +319,8 @@ class _CameraScreenState extends State<CameraScreen> {
                         currentPose,
                         imageSize,
                         isGoodPosture,
+                        trajectory,
+                        _currentMask,
                       ),
                     ),
                 ],
@@ -279,7 +330,7 @@ class _CameraScreenState extends State<CameraScreen> {
           Positioned(
             top: 20,
             left: 20,
-            child: _buildOverlayUI(status, reps, angle, isGoodPosture),
+            child: _buildOverlayUI(status, reps, angle, isGoodPosture, rom, tempo),
           ),
           Positioned(
             bottom: 30,
@@ -316,8 +367,9 @@ class _CameraScreenState extends State<CameraScreen> {
     }
   }
 
-  Widget _buildOverlayUI(String status, int reps, double angle, bool isGoodPosture) {
+  Widget _buildOverlayUI(String status, int reps, double angle, bool isGoodPosture, double rom, String tempo) {
     return Container(
+      width: 250,
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
         color: Colors.black.withOpacity(0.6),
@@ -326,6 +378,11 @@ class _CameraScreenState extends State<CameraScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (_brightness < 50)
+            const Padding(
+              padding: EdgeInsets.only(bottom: 8.0),
+              child: Text("⚠️ Ruangan terlalu gelap!", style: TextStyle(color: Colors.redAccent, fontSize: 14, fontWeight: FontWeight.bold)),
+            ),
           Text(
             "Reps: $reps", 
             style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)
@@ -335,7 +392,7 @@ class _CameraScreenState extends State<CameraScreen> {
             status, 
             style: TextStyle(
               color: isGoodPosture ? Colors.greenAccent : Colors.yellowAccent, 
-              fontSize: 18,
+              fontSize: 16,
               fontWeight: FontWeight.bold
             )
           ),
@@ -344,6 +401,29 @@ class _CameraScreenState extends State<CameraScreen> {
             "${widget.exerciseType.angleLabel}: ${angle.toStringAsFixed(0)}°", 
             style: const TextStyle(color: Colors.grey, fontSize: 14)
           ),
+          if (tempo.isNotEmpty) ...[
+            const SizedBox(height: 5),
+            Text(
+              "Tempo: $tempo", 
+              style: TextStyle(color: tempo.contains("Bagus") ? Colors.greenAccent : Colors.redAccent, fontSize: 14)
+            ),
+          ],
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              const Text("ROM: ", style: TextStyle(color: Colors.white70, fontSize: 14)),
+              Expanded(
+                child: LinearProgressIndicator(
+                  value: rom / 100,
+                  backgroundColor: Colors.white24,
+                  color: Colors.blueAccent,
+                  minHeight: 8,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text("${rom.toStringAsFixed(0)}%", style: const TextStyle(color: Colors.white, fontSize: 12)),
+            ],
+          )
         ],
       ),
     );

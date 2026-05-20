@@ -12,6 +12,12 @@ class PushUpProvider extends ChangeNotifier {
   double _elbowAngle = 0.0;
   bool _isValidRep = false;
   bool _hasStarted = false;
+  
+  // Advanced PCD Features
+  double _romPercentage = 0.0;
+  String _tempoStatus = "";
+  DateTime? _phaseStartTime;
+  final List<Offset> _trajectoryPoints = [];
 
   Pose? _currentPose;
   bool _isGoodPosture = false;
@@ -22,6 +28,9 @@ class PushUpProvider extends ChangeNotifier {
   Pose? get currentPose => _currentPose;
   bool get isGoodPosture => _isGoodPosture;
   bool get hasStarted => _hasStarted;
+  double get romPercentage => _romPercentage;
+  String get tempoStatus => _tempoStatus;
+  List<Offset> get trajectoryPoints => _trajectoryPoints;
 
   void reset() {
     _currentState = PushUpState.armsExtended;
@@ -32,6 +41,10 @@ class PushUpProvider extends ChangeNotifier {
     _hasStarted = false;
     _currentPose = null;
     _isGoodPosture = false;
+    _romPercentage = 0.0;
+    _tempoStatus = "";
+    _phaseStartTime = null;
+    _trajectoryPoints.clear();
     notifyListeners();
   }
 
@@ -45,6 +58,14 @@ class PushUpProvider extends ChangeNotifier {
     final leftAnkle = pose.landmarks[PoseLandmarkType.leftAnkle];
 
     final threshold = EnvConfig.aiConfidenceThreshold;
+
+    // Trajectory tracking (menggunakan bahu)
+    if (leftShoulder != null) {
+      _trajectoryPoints.add(Offset(leftShoulder.x, leftShoulder.y));
+      if (_trajectoryPoints.length > 20) {
+        _trajectoryPoints.removeAt(0);
+      }
+    }
 
     // --- Validasi landmark ---
     if (leftShoulder == null || leftElbow == null || leftWrist == null ||
@@ -98,6 +119,13 @@ class PushUpProvider extends ChangeNotifier {
     final angle = _calculateAngle(leftShoulder, leftElbow, leftWrist);
     _elbowAngle = angle;
 
+    // --- Kalkulasi ROM (Range of Motion) ---
+    // Lurus ~140, Ditekuk ~100
+    if (140.0 - 100.0 > 0) {
+      double rom = ((140.0 - angle) / (140.0 - 100.0)) * 100;
+      _romPercentage = rom.clamp(0.0, 100.0);
+    }
+
     _analyzePushUpState(angle);
     notifyListeners();
   }
@@ -119,11 +147,23 @@ class PushUpProvider extends ChangeNotifier {
           _isValidRep = false;
           _status = "Turun...";
           _isGoodPosture = false;
+          _phaseStartTime = DateTime.now();
+          _tempoStatus = "";
         }
         break;
 
       case PushUpState.goingDown:
         if (angle <= bentAngle) {
+          // Analisis Tempo Eksentrik
+          if (_phaseStartTime != null) {
+            final ms = DateTime.now().difference(_phaseStartTime!).inMilliseconds;
+            if (ms < 1000) {
+              _tempoStatus = "Terlalu Cepat!";
+            } else {
+              _tempoStatus = "Tempo Bagus";
+            }
+          }
+
           _currentState = PushUpState.atBottom;
           _isValidRep = true;
           _status = "Posisi Bagus! Naik!";
@@ -139,6 +179,7 @@ class PushUpProvider extends ChangeNotifier {
         if (angle > bentAngle + 15) {
           _currentState = PushUpState.comingUp;
           _status = "Naik...";
+          _phaseStartTime = DateTime.now(); // Timer konsentrik
         }
         break;
 

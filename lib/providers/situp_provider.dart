@@ -13,6 +13,12 @@ class SitUpProvider extends ChangeNotifier {
   double _kneeAngle = 0.0;   // Sudut lutut (hip-knee-ankle)
   bool _isValidRep = false;
   bool _hasStarted = false;
+  
+  // Advanced PCD Features
+  double _romPercentage = 0.0;
+  String _tempoStatus = "";
+  DateTime? _phaseStartTime;
+  final List<Offset> _trajectoryPoints = [];
 
   Pose? _currentPose;
   bool _isGoodPosture = false;
@@ -24,6 +30,9 @@ class SitUpProvider extends ChangeNotifier {
   Pose? get currentPose => _currentPose;
   bool get isGoodPosture => _isGoodPosture;
   bool get hasStarted => _hasStarted;
+  double get romPercentage => _romPercentage;
+  String get tempoStatus => _tempoStatus;
+  List<Offset> get trajectoryPoints => _trajectoryPoints;
 
   void reset() {
     _currentState = SitUpState.lyingDown;
@@ -35,6 +44,10 @@ class SitUpProvider extends ChangeNotifier {
     _hasStarted = false;
     _currentPose = null;
     _isGoodPosture = false;
+    _romPercentage = 0.0;
+    _tempoStatus = "";
+    _phaseStartTime = null;
+    _trajectoryPoints.clear();
     notifyListeners();
   }
 
@@ -47,6 +60,14 @@ class SitUpProvider extends ChangeNotifier {
     final leftAnkle = pose.landmarks[PoseLandmarkType.leftAnkle];
 
     final threshold = EnvConfig.aiConfidenceThreshold;
+
+    // Trajectory tracking (menggunakan bahu untuk sit-up)
+    if (leftShoulder != null) {
+      _trajectoryPoints.add(Offset(leftShoulder.x, leftShoulder.y));
+      if (_trajectoryPoints.length > 20) {
+        _trajectoryPoints.removeAt(0);
+      }
+    }
 
     // --- Validasi landmark ---
     if (leftShoulder == null || leftHip == null || leftKnee == null || leftAnkle == null) {
@@ -105,6 +126,11 @@ class SitUpProvider extends ChangeNotifier {
     final torsoAngle = _calculateTorsoFromHorizontal(leftShoulder, leftHip);
     _bodyAngle = torsoAngle;
 
+    // --- Kalkulasi ROM (Range of Motion) ---
+    // Rebahan ~25, Sit-up atas ~55
+    double rom = ((torsoAngle - 25.0) / (55.0 - 25.0)) * 100;
+    _romPercentage = rom.clamp(0.0, 100.0);
+
     _analyzeSitUpState(torsoAngle);
     notifyListeners();
   }
@@ -136,11 +162,23 @@ class SitUpProvider extends ChangeNotifier {
           _isValidRep = false;
           _status = "Naik...";
           _isGoodPosture = false;
+          _phaseStartTime = DateTime.now(); // Mulai timer tempo konsentrik
+          _tempoStatus = "";
         }
         break;
 
       case SitUpState.goingUp:
         if (torsoAngle >= sitUpThreshold) {
+          // Analisis Tempo Konsentrik
+          if (_phaseStartTime != null) {
+            final ms = DateTime.now().difference(_phaseStartTime!).inMilliseconds;
+            if (ms < 800) {
+              _tempoStatus = "Terlalu Cepat!";
+            } else {
+              _tempoStatus = "Tempo Bagus";
+            }
+          }
+
           _currentState = SitUpState.atTop;
           _isValidRep = true;
           _status = "Posisi Bagus!";
@@ -157,6 +195,7 @@ class SitUpProvider extends ChangeNotifier {
         if (torsoAngle < sitUpThreshold - 10) {
           _currentState = SitUpState.goingDown;
           _status = "Turun...";
+          _phaseStartTime = DateTime.now(); // Mulai timer tempo eksentrik
         }
         break;
 
