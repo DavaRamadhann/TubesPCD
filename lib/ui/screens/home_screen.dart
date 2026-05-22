@@ -36,6 +36,8 @@ class _HomeScreenState extends State<HomeScreen> {
         return ExerciseType.sitUp;
       case 'pushUp':
         return ExerciseType.pushUp;
+      case 'shoulderTap':
+        return ExerciseType.shoulderTap;
       default:
         return ExerciseType.squat;
     }
@@ -85,6 +87,8 @@ class _HomeScreenState extends State<HomeScreen> {
         return 'Latihan perut — rebahan lalu bangun';
       case ExerciseType.pushUp:
         return 'Latihan dada — push-up naik turun';
+      case ExerciseType.shoulderTap:
+        return 'Latihan bahu — tap bahu kanan-kiri bergantian';
     }
   }
 

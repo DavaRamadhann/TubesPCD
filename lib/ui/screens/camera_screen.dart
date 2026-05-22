@@ -11,6 +11,7 @@ import '../../services/pose_inference_service.dart';
 import '../../providers/squat_provider.dart';
 import '../../providers/situp_provider.dart';
 import '../../providers/pushup_provider.dart';
+import '../../providers/shouldertap_provider.dart';
 import '../painters/pose_painter.dart';
 
 class CameraScreen extends StatefulWidget {
@@ -65,6 +66,9 @@ class _CameraScreenState extends State<CameraScreen> {
       case ExerciseType.pushUp:
         context.read<PushUpProvider>().reset();
         break;
+      case ExerciseType.shoulderTap:
+        context.read<ShoulderTapProvider>().reset();
+        break;
     }
   }
 
@@ -79,6 +83,9 @@ class _CameraScreenState extends State<CameraScreen> {
       case ExerciseType.pushUp:
         context.read<PushUpProvider>().processPose(pose);
         break;
+      case ExerciseType.shoulderTap:
+        context.read<ShoulderTapProvider>().processPose(pose);
+        break;
     }
   }
 
@@ -90,6 +97,8 @@ class _CameraScreenState extends State<CameraScreen> {
         return context.read<SitUpProvider>().repCount;
       case ExerciseType.pushUp:
         return context.read<PushUpProvider>().repCount;
+      case ExerciseType.shoulderTap:
+        return context.read<ShoulderTapProvider>().repCount;
     }
   }
 
@@ -173,6 +182,8 @@ class _CameraScreenState extends State<CameraScreen> {
         return context.select<SitUpProvider, String>((p) => p.status);
       case ExerciseType.pushUp:
         return context.select<PushUpProvider, String>((p) => p.status);
+      case ExerciseType.shoulderTap:
+        return context.select<ShoulderTapProvider, String>((p) => p.status);
     }
   }
 
@@ -184,6 +195,8 @@ class _CameraScreenState extends State<CameraScreen> {
         return context.select<SitUpProvider, int>((p) => p.repCount);
       case ExerciseType.pushUp:
         return context.select<PushUpProvider, int>((p) => p.repCount);
+      case ExerciseType.shoulderTap:
+        return context.select<ShoulderTapProvider, int>((p) => p.repCount);
     }
   }
 
@@ -195,6 +208,8 @@ class _CameraScreenState extends State<CameraScreen> {
         return context.select<SitUpProvider, double>((p) => p.bodyAngle);
       case ExerciseType.pushUp:
         return context.select<PushUpProvider, double>((p) => p.elbowAngle);
+      case ExerciseType.shoulderTap:
+        return context.select<ShoulderTapProvider, double>((p) => p.plankAngle);
     }
   }
 
@@ -206,6 +221,8 @@ class _CameraScreenState extends State<CameraScreen> {
         return context.select<SitUpProvider, bool>((p) => p.isGoodPosture);
       case ExerciseType.pushUp:
         return context.select<PushUpProvider, bool>((p) => p.isGoodPosture);
+      case ExerciseType.shoulderTap:
+        return context.select<ShoulderTapProvider, bool>((p) => p.isGoodPosture);
     }
   }
 
@@ -217,6 +234,8 @@ class _CameraScreenState extends State<CameraScreen> {
         return context.select<SitUpProvider, bool>((p) => p.hasStarted);
       case ExerciseType.pushUp:
         return context.select<PushUpProvider, bool>((p) => p.hasStarted);
+      case ExerciseType.shoulderTap:
+        return context.select<ShoulderTapProvider, bool>((p) => p.hasStarted);
     }
   }
 
@@ -228,6 +247,8 @@ class _CameraScreenState extends State<CameraScreen> {
         return context.select<SitUpProvider, Pose?>((p) => p.currentPose);
       case ExerciseType.pushUp:
         return context.select<PushUpProvider, Pose?>((p) => p.currentPose);
+      case ExerciseType.shoulderTap:
+        return context.select<ShoulderTapProvider, Pose?>((p) => p.currentPose);
     }
   }
 
@@ -236,6 +257,7 @@ class _CameraScreenState extends State<CameraScreen> {
       case ExerciseType.squat: return context.select<SquatProvider, double>((p) => p.romPercentage);
       case ExerciseType.sitUp: return context.select<SitUpProvider, double>((p) => p.romPercentage);
       case ExerciseType.pushUp: return context.select<PushUpProvider, double>((p) => p.romPercentage);
+      case ExerciseType.shoulderTap: return context.select<ShoulderTapProvider, double>((p) => p.romPercentage);
     }
   }
   
@@ -244,6 +266,7 @@ class _CameraScreenState extends State<CameraScreen> {
       case ExerciseType.squat: return context.select<SquatProvider, String>((p) => p.tempoStatus);
       case ExerciseType.sitUp: return context.select<SitUpProvider, String>((p) => p.tempoStatus);
       case ExerciseType.pushUp: return context.select<PushUpProvider, String>((p) => p.tempoStatus);
+      case ExerciseType.shoulderTap: return context.select<ShoulderTapProvider, String>((p) => p.tempoStatus);
     }
   }
 
@@ -252,6 +275,7 @@ class _CameraScreenState extends State<CameraScreen> {
       case ExerciseType.squat: return context.select<SquatProvider, List<Offset>>((p) => p.trajectoryPoints);
       case ExerciseType.sitUp: return context.select<SitUpProvider, List<Offset>>((p) => p.trajectoryPoints);
       case ExerciseType.pushUp: return context.select<PushUpProvider, List<Offset>>((p) => p.trajectoryPoints);
+      case ExerciseType.shoulderTap: return context.select<ShoulderTapProvider, List<Offset>>((p) => p.trajectoryPoints);
     }
   }
 
@@ -364,6 +388,8 @@ class _CameraScreenState extends State<CameraScreen> {
         return SitUpSilhouettePainter();
       case ExerciseType.pushUp:
         return PushUpSilhouettePainter();
+      case ExerciseType.shoulderTap:
+        return ShoulderTapSilhouettePainter();
     }
   }
 
@@ -544,6 +570,74 @@ class PushUpSilhouettePainter extends CustomPainter {
     canvas.drawLine(
       Offset(size.width * 0.28, bodyY + size.height * 0.1),
       Offset(size.width * 0.3, bodyY + size.height * 0.15),
+      paint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class ShoulderTapSilhouettePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white.withOpacity(0.5)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 6
+      ..strokeCap = StrokeCap.round;
+
+    final centerX = size.width / 2;
+    final headY = size.height * 0.35;
+    final shoulderY = size.height * 0.45;
+    final shoulderWidth = size.width * 0.25;
+    final armLength = size.height * 0.2;
+
+    // Kepala
+    canvas.drawCircle(Offset(centerX, headY), size.height * 0.04, paint);
+
+    // Bahu (Horizontal)
+    canvas.drawLine(
+      Offset(centerX - shoulderWidth, shoulderY),
+      Offset(centerX + shoulderWidth, shoulderY),
+      paint,
+    );
+
+    // Tangan Kiri (Menumpu lurus ke bawah)
+    canvas.drawLine(
+      Offset(centerX - shoulderWidth, shoulderY),
+      Offset(centerX - shoulderWidth, shoulderY + armLength),
+      paint,
+    );
+
+    // Tangan Kanan (Menepuk menyentuh bahu kiri)
+    canvas.drawLine(
+      Offset(centerX + shoulderWidth, shoulderY),
+      Offset(centerX + shoulderWidth * 0.3, shoulderY + armLength * 0.5),
+      paint,
+    );
+    canvas.drawLine(
+      Offset(centerX + shoulderWidth * 0.3, shoulderY + armLength * 0.5),
+      Offset(centerX - shoulderWidth, shoulderY), // Menyentuh bahu kiri
+      paint,
+    );
+
+    // Badan/Pinggul (Tengah)
+    canvas.drawLine(
+      Offset(centerX, shoulderY),
+      Offset(centerX, shoulderY + armLength),
+      paint,
+    );
+
+    // Kaki (Merentang di belakang)
+    canvas.drawLine(
+      Offset(centerX, shoulderY + armLength),
+      Offset(centerX - shoulderWidth * 0.5, shoulderY + armLength * 1.3),
+      paint,
+    );
+    canvas.drawLine(
+      Offset(centerX, shoulderY + armLength),
+      Offset(centerX + shoulderWidth * 0.5, shoulderY + armLength * 1.3),
       paint,
     );
   }
