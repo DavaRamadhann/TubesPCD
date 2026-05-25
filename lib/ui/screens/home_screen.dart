@@ -38,6 +38,10 @@ class _HomeScreenState extends State<HomeScreen> {
         return ExerciseType.pushUp;
       case 'shoulderTap':
         return ExerciseType.shoulderTap;
+      case 'lunges':
+        return ExerciseType.lunges;
+      case 'burpees':
+        return ExerciseType.burpees;
       default:
         return ExerciseType.squat;
     }
@@ -89,6 +93,10 @@ class _HomeScreenState extends State<HomeScreen> {
         return 'Latihan dada — push-up naik turun';
       case ExerciseType.shoulderTap:
         return 'Latihan bahu — tap bahu kanan-kiri bergantian';
+      case ExerciseType.lunges:
+        return 'Latihan kaki — melangkah dan turunkan pinggul bergantian kaki';
+      case ExerciseType.burpees:
+        return 'Latihan seluruh tubuh — turun plank lalu loncat berdiri';
     }
   }
 

@@ -5,6 +5,8 @@ enum ExerciseType {
   sitUp,
   pushUp,
   shoulderTap,
+  lunges,
+  burpees,
 }
 
 extension ExerciseTypeExtension on ExerciseType {
@@ -18,6 +20,10 @@ extension ExerciseTypeExtension on ExerciseType {
         return 'Push-Up';
       case ExerciseType.shoulderTap:
         return 'Shoulder Tap';
+      case ExerciseType.lunges:
+        return 'Lunges';
+      case ExerciseType.burpees:
+        return 'Burpees';
     }
   }
 
@@ -31,6 +37,10 @@ extension ExerciseTypeExtension on ExerciseType {
         return Icons.sports_gymnastics;
       case ExerciseType.shoulderTap:
         return Icons.pan_tool_alt;
+      case ExerciseType.lunges:
+        return Icons.directions_walk;
+      case ExerciseType.burpees:
+        return Icons.directions_run;
     }
   }
 
@@ -44,6 +54,10 @@ extension ExerciseTypeExtension on ExerciseType {
         return 'Sudut Siku';
       case ExerciseType.shoulderTap:
         return 'Jarak Ketukan';
+      case ExerciseType.lunges:
+        return 'Sudut Lutut Depan';
+      case ExerciseType.burpees:
+        return 'Sudut Badan';
     }
   }
 }
