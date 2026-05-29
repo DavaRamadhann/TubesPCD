@@ -25,7 +25,6 @@ class _CreateProgramScreenState extends State<CreateProgramScreen> {
   void _showExercisePicker() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF2C2C2C),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -39,14 +38,8 @@ class _CreateProgramScreenState extends State<CreateProgramScreen> {
                 const Padding(
                   padding: EdgeInsets.only(bottom: 16),
                   child: Text(
-                    'PILIH LATIHAN',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      fontFamily: 'BebasNeue',
-                      letterSpacing: 1.2,
-                    ),
+                    'Pilih Latihan',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
                 ),
                 Flexible(
@@ -58,19 +51,14 @@ class _CreateProgramScreenState extends State<CreateProgramScreen> {
                             leading: Icon(
                               type.icon,
                               size: 32,
-                              color: Colors.blueAccent,
+                              color: Colors.blue,
                             ),
                             title: Text(
                               type.label,
-                              style: const TextStyle(
-                                fontSize: 18,
-                                color: Colors.white,
-                              ),
+                              style: const TextStyle(fontSize: 18),
                             ),
-                            trailing: const Icon(
-                              Icons.add_circle_outline,
-                              color: Colors.white54,
-                            ),
+                            subtitle: Text(_exerciseDescription(type)),
+                            trailing: const Icon(Icons.chevron_right),
                             onTap: () {
                               Navigator.pop(context);
                               _showWorkoutConfig(type);
@@ -86,6 +74,31 @@ class _CreateProgramScreenState extends State<CreateProgramScreen> {
         );
       },
     );
+  }
+
+  String _exerciseDescription(ExerciseType type) {
+    switch (type) {
+      case ExerciseType.squat:
+        return 'Latihan kaki — berdiri lalu jongkok';
+      case ExerciseType.sitUp:
+        return 'Latihan perut — rebahan lalu bangun';
+      case ExerciseType.pushUp:
+        return 'Latihan dada — push-up naik turun';
+      case ExerciseType.shoulderTap:
+        return 'Latihan bahu — tap bahu kanan-kiri bergantian';
+      case ExerciseType.lunges:
+        return 'Latihan kaki — melangkah dan turunkan pinggul bergantian kaki';
+      case ExerciseType.burpees:
+        return 'Latihan seluruh tubuh — turun plank lalu loncat berdiri';
+      case ExerciseType.jumpingJack:
+        return 'Latihan kardio — buka tutup kaki dan angkat tangan';
+      case ExerciseType.benchDips:
+        return 'Latihan tricep — duduk di bangku, turun naikkan badan';
+      case ExerciseType.plank:
+        return 'Latihan inti — tahan posisi badan lurus statis';
+      case ExerciseType.legRaise:
+        return 'Latihan perut — rebahan dan angkat lurus kedua kaki';
+    }
   }
 
   void _showWorkoutConfig(ExerciseType type) {
@@ -141,11 +154,16 @@ class _CreateProgramScreenState extends State<CreateProgramScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'BUAT PROGRAM LATIHAN',
-          style: TextStyle(fontFamily: 'BebasNeue', letterSpacing: 1.2),
+        title: Text(
+          'Buat Program Latihan',
+          style: theme.textTheme.titleLarge?.copyWith(
+            color: Colors.white,
+            letterSpacing: 1.2,
+          ),
         ),
       ),
       body: Column(
@@ -390,7 +408,6 @@ class _ProgramWorkoutConfigSheetState
                       style: theme.textTheme.displaySmall?.copyWith(
                         color: Colors.white,
                         letterSpacing: 1.2,
-                        fontFamily: 'BebasNeue',
                       ),
                     ),
                   ],
@@ -441,8 +458,6 @@ class _ProgramWorkoutConfigSheetState
                     style: theme.textTheme.titleLarge?.copyWith(
                       color: Colors.white,
                       fontSize: 20,
-                      fontFamily: 'BebasNeue',
-                      letterSpacing: 1.2,
                     ),
                   ),
                 ),
@@ -518,8 +533,6 @@ class _ProgramWorkoutConfigSheetState
                     style: theme.textTheme.titleLarge?.copyWith(
                       color: Colors.white,
                       fontSize: 20,
-                      fontFamily: 'BebasNeue',
-                      letterSpacing: 1.2,
                     ),
                   ),
                 ),
@@ -595,8 +608,6 @@ class _ProgramWorkoutConfigSheetState
                     style: theme.textTheme.titleLarge?.copyWith(
                       color: Colors.white,
                       fontSize: 20,
-                      fontFamily: 'BebasNeue',
-                      letterSpacing: 1.2,
                     ),
                   ),
                 ),
@@ -659,7 +670,6 @@ class _ProgramWorkoutConfigSheetState
                   color: Colors.white,
                   letterSpacing: 1.5,
                   fontSize: 22,
-                  fontFamily: 'BebasNeue',
                 ),
               ),
             ),

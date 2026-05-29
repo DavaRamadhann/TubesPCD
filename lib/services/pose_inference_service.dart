@@ -10,21 +10,39 @@ class InferenceResult {
   final SegmentationMask? mask;
   final double brightness;
 
-  InferenceResult({
-    required this.poses,
-    this.mask,
-    required this.brightness,
-  });
+  InferenceResult({required this.poses, this.mask, required this.brightness});
 }
 
 class PoseInferenceService {
-  final PoseDetector _poseDetector = PoseDetector(options: PoseDetectorOptions());
+  final PoseDetector _cameraPoseDetector = PoseDetector(
+    options: PoseDetectorOptions(mode: PoseDetectionMode.stream),
+  );
+  final PoseDetector _staticPoseDetector = PoseDetector(
+    options: PoseDetectorOptions(mode: PoseDetectionMode.single),
+  );
   final SelfieSegmenter _segmenter = SelfieSegmenter(
     mode: SegmenterMode.stream,
     enableRawSizeMask: false,
   );
-  
+
   bool _isProcessing = false;
+
+  Future<InferenceResult?> processStaticImage(String filePath) async {
+    if (_isProcessing) return null;
+    _isProcessing = true;
+
+    try {
+      final inputImage = InputImage.fromFilePath(filePath);
+      final poses = await _staticPoseDetector.processImage(inputImage);
+
+      return InferenceResult(poses: poses, mask: null, brightness: 255.0);
+    } catch (e) {
+      debugPrint("Error processing static image: $e");
+      return null;
+    } finally {
+      _isProcessing = false;
+    }
+  }
 
   Future<InferenceResult?> processCameraImage(
     CameraImage image,
@@ -35,27 +53,26 @@ class PoseInferenceService {
   ) async {
     if (_isProcessing) return null;
     _isProcessing = true;
-    
+
     try {
       final inputImage = _inputImageFromCameraImage(
-        image, sensorOrientation, lensDirection, deviceOrientation,
+        image,
+        sensorOrientation,
+        lensDirection,
+        deviceOrientation,
       );
       if (inputImage == null) return null;
-      
-      final poses = await _poseDetector.processImage(inputImage);
+
+      final poses = await _cameraPoseDetector.processImage(inputImage);
       SegmentationMask? mask;
-      
+
       if (enableSegmentation) {
         mask = await _segmenter.processImage(inputImage);
       }
-      
+
       final brightness = _calculateBrightness(image);
-      
-      return InferenceResult(
-        poses: poses,
-        mask: mask,
-        brightness: brightness,
-      );
+
+      return InferenceResult(poses: poses, mask: mask, brightness: brightness);
     } finally {
       _isProcessing = false;
     }
@@ -63,20 +80,20 @@ class PoseInferenceService {
 
   double _calculateBrightness(CameraImage image) {
     if (image.planes.isEmpty) return 255.0;
-    
+
     final bytes = image.planes[0].bytes;
     if (bytes.isEmpty) return 255.0;
 
     int total = 0;
-    int sampleStep = (bytes.length / 1000).ceil(); 
+    int sampleStep = (bytes.length / 1000).ceil();
     if (sampleStep < 1) sampleStep = 1;
-    
+
     int count = 0;
     for (int i = 0; i < bytes.length; i += sampleStep) {
       total += bytes[i];
       count++;
     }
-    
+
     return count > 0 ? (total / count) : 255.0;
   }
 
@@ -106,15 +123,17 @@ class PoseInferenceService {
     if (lensDirection == CameraLensDirection.front) {
       adjustedRotation = (sensorOrientation + deviceOrientationDegrees) % 360;
     } else {
-      adjustedRotation = (sensorOrientation - deviceOrientationDegrees + 360) % 360;
+      adjustedRotation =
+          (sensorOrientation - deviceOrientationDegrees + 360) % 360;
     }
 
-    final rotation = InputImageRotationValue.fromRawValue(adjustedRotation)
-        ?? InputImageRotation.rotation0deg;
-    
+    final rotation =
+        InputImageRotationValue.fromRawValue(adjustedRotation) ??
+        InputImageRotation.rotation0deg;
+
     final format = InputImageFormatValue.fromRawValue(image.format.raw);
-    final fallbackFormat = defaultTargetPlatform == TargetPlatform.iOS 
-        ? InputImageFormat.bgra8888 
+    final fallbackFormat = defaultTargetPlatform == TargetPlatform.iOS
+        ? InputImageFormat.bgra8888
         : InputImageFormat.nv21;
 
     final WriteBuffer allBytes = WriteBuffer();
@@ -135,7 +154,8 @@ class PoseInferenceService {
   }
 
   void dispose() {
-    _poseDetector.close();
+    _cameraPoseDetector.close();
+    _staticPoseDetector.close();
     _segmenter.close();
   }
 }

@@ -16,6 +16,7 @@ import 'providers/benchdips_provider.dart';
 import 'providers/plank_provider.dart';
 import 'providers/legraise_provider.dart';
 import 'ui/screens/home_screen.dart';
+import 'ui/screens/main_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -117,7 +118,7 @@ class MyApp extends StatelessWidget {
             foregroundColor: Colors.white,
           ),
         ),
-        home: HomeScreen(cameras: cameras),
+        home: MainScreen(cameras: cameras),
       ),
     );
   }
