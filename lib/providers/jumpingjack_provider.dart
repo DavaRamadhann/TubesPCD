@@ -136,14 +136,7 @@ class JumpingJackProvider extends ChangeNotifier {
 
       case JumpingJackState.goingUp:
         if (armAngle >= maxAngle && legSpreadRatio >= 0.8) {
-          if (_phaseStartTime != null) {
-            final ms = DateTime.now().difference(_phaseStartTime!).inMilliseconds;
-            if (ms < 600) {
-              _tempoStatus = "Terlalu Cepat!";
-            } else {
-              _tempoStatus = "Tempo Bagus";
-            }
-          }
+          _tempoStatus = "";
 
           _currentState = JumpingJackState.atTop;
           _status = "Posisi Bagus! Turunkan!";
