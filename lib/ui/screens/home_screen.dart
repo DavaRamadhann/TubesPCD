@@ -44,6 +44,8 @@ class _HomeScreenState extends State<HomeScreen> {
         return ExerciseType.burpees;
       case 'jumpingJack':
         return ExerciseType.jumpingJack;
+      case 'benchDips':
+        return ExerciseType.benchDips;
       default:
         return ExerciseType.squat;
     }
@@ -108,6 +110,8 @@ class _HomeScreenState extends State<HomeScreen> {
         return 'Latihan seluruh tubuh — turun plank lalu loncat berdiri';
       case ExerciseType.jumpingJack:
         return 'Latihan kardio — buka tutup kaki dan angkat tangan';
+      case ExerciseType.benchDips:
+        return 'Latihan tricep — duduk di bangku, turun naikkan badan';
     }
   }
 

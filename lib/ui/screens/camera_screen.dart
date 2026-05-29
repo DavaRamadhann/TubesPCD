@@ -15,6 +15,7 @@ import '../../providers/shouldertap_provider.dart';
 import '../../providers/lunges_provider.dart';
 import '../../providers/burpees_provider.dart';
 import '../../providers/jumpingjack_provider.dart';
+import '../../providers/benchdips_provider.dart';
 import '../painters/pose_painter.dart';
 
 class CameraScreen extends StatefulWidget {
@@ -81,6 +82,9 @@ class _CameraScreenState extends State<CameraScreen> {
       case ExerciseType.jumpingJack:
         context.read<JumpingJackProvider>().reset();
         break;
+      case ExerciseType.benchDips:
+        context.read<BenchDipsProvider>().reset();
+        break;
     }
   }
 
@@ -107,6 +111,9 @@ class _CameraScreenState extends State<CameraScreen> {
       case ExerciseType.jumpingJack:
         context.read<JumpingJackProvider>().processPose(pose);
         break;
+      case ExerciseType.benchDips:
+        context.read<BenchDipsProvider>().processPose(pose);
+        break;
     }
   }
 
@@ -126,6 +133,8 @@ class _CameraScreenState extends State<CameraScreen> {
         return context.read<BurpeesProvider>().repCount;
       case ExerciseType.jumpingJack:
         return context.read<JumpingJackProvider>().repCount;
+      case ExerciseType.benchDips:
+        return context.read<BenchDipsProvider>().repCount;
     }
   }
 
@@ -217,6 +226,8 @@ class _CameraScreenState extends State<CameraScreen> {
         return context.select<BurpeesProvider, String>((p) => p.status);
       case ExerciseType.jumpingJack:
         return context.select<JumpingJackProvider, String>((p) => p.status);
+      case ExerciseType.benchDips:
+        return context.select<BenchDipsProvider, String>((p) => p.status);
     }
   }
 
@@ -236,6 +247,8 @@ class _CameraScreenState extends State<CameraScreen> {
         return context.select<BurpeesProvider, int>((p) => p.repCount);
       case ExerciseType.jumpingJack:
         return context.select<JumpingJackProvider, int>((p) => p.repCount);
+      case ExerciseType.benchDips:
+        return context.select<BenchDipsProvider, int>((p) => p.repCount);
     }
   }
 
@@ -255,6 +268,8 @@ class _CameraScreenState extends State<CameraScreen> {
         return context.select<BurpeesProvider, double>((p) => p.torsoAngle);
       case ExerciseType.jumpingJack:
         return context.select<JumpingJackProvider, double>((p) => p.armAngle);
+      case ExerciseType.benchDips:
+        return context.select<BenchDipsProvider, double>((p) => p.elbowAngle);
     }
   }
 
@@ -274,25 +289,8 @@ class _CameraScreenState extends State<CameraScreen> {
         return context.select<BurpeesProvider, bool>((p) => p.isGoodPosture);
       case ExerciseType.jumpingJack:
         return context.select<JumpingJackProvider, bool>((p) => p.isGoodPosture);
-    }
-  }
-
-  bool _getHasStarted(BuildContext context) {
-    switch (widget.exerciseType) {
-      case ExerciseType.squat:
-        return context.select<SquatProvider, bool>((p) => p.hasStarted);
-      case ExerciseType.sitUp:
-        return context.select<SitUpProvider, bool>((p) => p.hasStarted);
-      case ExerciseType.pushUp:
-        return context.select<PushUpProvider, bool>((p) => p.hasStarted);
-      case ExerciseType.shoulderTap:
-        return context.select<ShoulderTapProvider, bool>((p) => p.hasStarted);
-      case ExerciseType.lunges:
-        return context.select<LungesProvider, bool>((p) => p.hasStarted);
-      case ExerciseType.burpees:
-        return context.select<BurpeesProvider, bool>((p) => p.hasStarted);
-      case ExerciseType.jumpingJack:
-        return context.select<JumpingJackProvider, bool>((p) => p.hasStarted);
+      case ExerciseType.benchDips:
+        return context.select<BenchDipsProvider, bool>((p) => p.isGoodPosture);
     }
   }
 
@@ -312,6 +310,8 @@ class _CameraScreenState extends State<CameraScreen> {
         return context.select<BurpeesProvider, Pose?>((p) => p.currentPose);
       case ExerciseType.jumpingJack:
         return context.select<JumpingJackProvider, Pose?>((p) => p.currentPose);
+      case ExerciseType.benchDips:
+        return context.select<BenchDipsProvider, Pose?>((p) => p.currentPose);
     }
   }
 
@@ -324,6 +324,7 @@ class _CameraScreenState extends State<CameraScreen> {
       case ExerciseType.lunges: return context.select<LungesProvider, double>((p) => p.romPercentage);
       case ExerciseType.burpees: return context.select<BurpeesProvider, double>((p) => p.romPercentage);
       case ExerciseType.jumpingJack: return context.select<JumpingJackProvider, double>((p) => p.romPercentage);
+      case ExerciseType.benchDips: return context.select<BenchDipsProvider, double>((p) => p.romPercentage);
     }
   }
   
@@ -336,6 +337,7 @@ class _CameraScreenState extends State<CameraScreen> {
       case ExerciseType.lunges: return context.select<LungesProvider, String>((p) => p.tempoStatus);
       case ExerciseType.burpees: return context.select<BurpeesProvider, String>((p) => p.tempoStatus);
       case ExerciseType.jumpingJack: return context.select<JumpingJackProvider, String>((p) => p.tempoStatus);
+      case ExerciseType.benchDips: return context.select<BenchDipsProvider, String>((p) => p.tempoStatus);
     }
   }
 
@@ -348,6 +350,7 @@ class _CameraScreenState extends State<CameraScreen> {
       case ExerciseType.lunges: return context.select<LungesProvider, List<Offset>>((p) => p.trajectoryPoints);
       case ExerciseType.burpees: return context.select<BurpeesProvider, List<Offset>>((p) => p.trajectoryPoints);
       case ExerciseType.jumpingJack: return context.select<JumpingJackProvider, List<Offset>>((p) => p.trajectoryPoints);
+      case ExerciseType.benchDips: return context.select<BenchDipsProvider, List<Offset>>((p) => p.trajectoryPoints);
     }
   }
 
@@ -361,7 +364,6 @@ class _CameraScreenState extends State<CameraScreen> {
     final reps = _getReps(context);
     final angle = _getAngle(context);
     final isGoodPosture = _getIsGoodPosture(context);
-    final hasStarted = _getHasStarted(context);
     final currentPose = _getCurrentPose(context);
     final rom = _getRom(context);
     final tempo = _getTempo(context);
@@ -404,11 +406,6 @@ class _CameraScreenState extends State<CameraScreen> {
                 fit: StackFit.expand,
                 children: [
                   CameraPreview(_controller!),
-                  if (!hasStarted)
-                    CustomPaint(
-                      painter: _getSilhouettePainter(),
-                      size: Size.infinite,
-                    ),
                   if (currentPose != null)
                     CustomPaint(
                       painter: PosePainter(
@@ -450,25 +447,6 @@ class _CameraScreenState extends State<CameraScreen> {
         ],
       ),
     );
-  }
-
-  CustomPainter _getSilhouettePainter() {
-    switch (widget.exerciseType) {
-      case ExerciseType.squat:
-        return SquatSilhouettePainter();
-      case ExerciseType.sitUp:
-        return SitUpSilhouettePainter();
-      case ExerciseType.pushUp:
-        return PushUpSilhouettePainter();
-      case ExerciseType.shoulderTap:
-        return ShoulderTapSilhouettePainter();
-      case ExerciseType.lunges:
-        return LungesSilhouettePainter();
-      case ExerciseType.burpees:
-        return BurpeesSilhouettePainter();
-      case ExerciseType.jumpingJack:
-        return JumpingJackSilhouettePainter();
-    }
   }
 
   Widget _buildOverlayUI(String status, int reps, double angle, bool isGoodPosture, double rom, String tempo) {
@@ -534,282 +512,4 @@ class _CameraScreenState extends State<CameraScreen> {
   }
 }
 
-// --- Siluet panduan untuk setiap exercise ---
 
-class SquatSilhouettePainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.white.withOpacity(0.5)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 6
-      ..strokeCap = StrokeCap.round;
-
-    final centerX = size.width / 2;
-    
-    // Kepala
-    canvas.drawCircle(Offset(centerX, size.height * 0.25), size.height * 0.05, paint);
-    
-    // Badan (Tulang Belakang)
-    canvas.drawLine(Offset(centerX, size.height * 0.3), Offset(centerX, size.height * 0.55), paint);
-    
-    // Tangan (Membentang sedikit ke bawah)
-    canvas.drawLine(Offset(centerX, size.height * 0.35), Offset(centerX - size.width * 0.15, size.height * 0.45), paint);
-    canvas.drawLine(Offset(centerX, size.height * 0.35), Offset(centerX + size.width * 0.15, size.height * 0.45), paint);
-    
-    // Kaki (Dibuka sedikit)
-    canvas.drawLine(Offset(centerX, size.height * 0.55), Offset(centerX - size.width * 0.1, size.height * 0.8), paint);
-    canvas.drawLine(Offset(centerX, size.height * 0.55), Offset(centerX + size.width * 0.1, size.height * 0.8), paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
-class SitUpSilhouettePainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.white.withOpacity(0.5)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 6
-      ..strokeCap = StrokeCap.round;
-
-    final centerY = size.height * 0.65;
-    
-    // Kepala (di kiri, rebahan)
-    canvas.drawCircle(Offset(size.width * 0.2, centerY - size.height * 0.03), size.height * 0.04, paint);
-    
-    // Badan (horizontal, dari kepala ke pinggul)
-    canvas.drawLine(
-      Offset(size.width * 0.25, centerY),
-      Offset(size.width * 0.55, centerY),
-      paint,
-    );
-    
-    // Kaki — ditekuk (lutut ke atas, kaki ke bawah)
-    canvas.drawLine(
-      Offset(size.width * 0.55, centerY),
-      Offset(size.width * 0.65, centerY - size.height * 0.12),
-      paint,
-    );
-    canvas.drawLine(
-      Offset(size.width * 0.65, centerY - size.height * 0.12),
-      Offset(size.width * 0.7, centerY + size.height * 0.02),
-      paint,
-    );
-    
-    // Tangan di belakang kepala
-    canvas.drawLine(
-      Offset(size.width * 0.3, centerY),
-      Offset(size.width * 0.22, centerY - size.height * 0.05),
-      paint,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
-class PushUpSilhouettePainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.white.withOpacity(0.5)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 6
-      ..strokeCap = StrokeCap.round;
-
-    final bodyY = size.height * 0.55;
-    
-    // Kepala
-    canvas.drawCircle(Offset(size.width * 0.22, bodyY - size.height * 0.06), size.height * 0.035, paint);
-    
-    // Badan (horizontal — dari shoulder ke hip)
-    canvas.drawLine(
-      Offset(size.width * 0.25, bodyY),
-      Offset(size.width * 0.65, bodyY),
-      paint,
-    );
-    
-    // Kaki (hip ke ankle, sedikit miring ke bawah)
-    canvas.drawLine(
-      Offset(size.width * 0.65, bodyY),
-      Offset(size.width * 0.85, bodyY + size.height * 0.03),
-      paint,
-    );
-    
-    // Tangan (shoulder ke bawah — posisi push-up)
-    canvas.drawLine(
-      Offset(size.width * 0.25, bodyY),
-      Offset(size.width * 0.28, bodyY + size.height * 0.1),
-      paint,
-    );
-    canvas.drawLine(
-      Offset(size.width * 0.28, bodyY + size.height * 0.1),
-      Offset(size.width * 0.3, bodyY + size.height * 0.15),
-      paint,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
-class ShoulderTapSilhouettePainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.white.withOpacity(0.5)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 6
-      ..strokeCap = StrokeCap.round;
-
-    final centerX = size.width / 2;
-    final headY = size.height * 0.35;
-    final shoulderY = size.height * 0.45;
-    final shoulderWidth = size.width * 0.25;
-    final armLength = size.height * 0.2;
-
-    // Kepala
-    canvas.drawCircle(Offset(centerX, headY), size.height * 0.04, paint);
-
-    // Bahu (Horizontal)
-    canvas.drawLine(
-      Offset(centerX - shoulderWidth, shoulderY),
-      Offset(centerX + shoulderWidth, shoulderY),
-      paint,
-    );
-
-    // Tangan Kiri (Menumpu lurus ke bawah)
-    canvas.drawLine(
-      Offset(centerX - shoulderWidth, shoulderY),
-      Offset(centerX - shoulderWidth, shoulderY + armLength),
-      paint,
-    );
-
-    // Tangan Kanan (Menepuk menyentuh bahu kiri)
-    canvas.drawLine(
-      Offset(centerX + shoulderWidth, shoulderY),
-      Offset(centerX + shoulderWidth * 0.3, shoulderY + armLength * 0.5),
-      paint,
-    );
-    canvas.drawLine(
-      Offset(centerX + shoulderWidth * 0.3, shoulderY + armLength * 0.5),
-      Offset(centerX - shoulderWidth, shoulderY), // Menyentuh bahu kiri
-      paint,
-    );
-
-    // Badan/Pinggul (Tengah)
-    canvas.drawLine(
-      Offset(centerX, shoulderY),
-      Offset(centerX, shoulderY + armLength),
-      paint,
-    );
-
-    // Kaki (Merentang di belakang)
-    canvas.drawLine(
-      Offset(centerX, shoulderY + armLength),
-      Offset(centerX - shoulderWidth * 0.5, shoulderY + armLength * 1.3),
-      paint,
-    );
-    canvas.drawLine(
-      Offset(centerX, shoulderY + armLength),
-      Offset(centerX + shoulderWidth * 0.5, shoulderY + armLength * 1.3),
-      paint,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
-class LungesSilhouettePainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.white.withOpacity(0.5)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 6
-      ..strokeCap = StrokeCap.round;
-
-    final centerX = size.width / 2;
-    
-    // Kepala
-    canvas.drawCircle(Offset(centerX, size.height * 0.25), size.height * 0.05, paint);
-    
-    // Badan
-    canvas.drawLine(Offset(centerX, size.height * 0.3), Offset(centerX, size.height * 0.55), paint);
-    
-    // Kaki depan (lutut menekuk 90 derajat)
-    canvas.drawLine(Offset(centerX, size.height * 0.55), Offset(centerX + size.width * 0.15, size.height * 0.65), paint);
-    canvas.drawLine(Offset(centerX + size.width * 0.15, size.height * 0.65), Offset(centerX + size.width * 0.15, size.height * 0.8), paint);
-    
-    // Kaki belakang (lutut hampir menyentuh tanah)
-    canvas.drawLine(Offset(centerX, size.height * 0.55), Offset(centerX - size.width * 0.15, size.height * 0.75), paint);
-    canvas.drawLine(Offset(centerX - size.width * 0.15, size.height * 0.75), Offset(centerX - size.width * 0.25, size.height * 0.8), paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
-class BurpeesSilhouettePainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.white.withOpacity(0.5)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 6
-      ..strokeCap = StrokeCap.round;
-
-    final centerX = size.width / 2;
-    
-    // Kepala
-    canvas.drawCircle(Offset(centerX, size.height * 0.25), size.height * 0.05, paint);
-    
-    // Badan (Tulang Belakang)
-    canvas.drawLine(Offset(centerX, size.height * 0.3), Offset(centerX, size.height * 0.55), paint);
-    
-    // Tangan (Membentang sedikit ke bawah/samping seperti siap loncat)
-    canvas.drawLine(Offset(centerX, size.height * 0.35), Offset(centerX - size.width * 0.15, size.height * 0.45), paint);
-    canvas.drawLine(Offset(centerX, size.height * 0.35), Offset(centerX + size.width * 0.15, size.height * 0.45), paint);
-    
-    // Kaki (Dibuka sedikit, pose siap loncat/squat)
-    canvas.drawLine(Offset(centerX, size.height * 0.55), Offset(centerX - size.width * 0.1, size.height * 0.8), paint);
-    canvas.drawLine(Offset(centerX, size.height * 0.55), Offset(centerX + size.width * 0.1, size.height * 0.8), paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
-class JumpingJackSilhouettePainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.white.withOpacity(0.5)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 6
-      ..strokeCap = StrokeCap.round;
-
-    final centerX = size.width / 2;
-
-    // Kepala
-    canvas.drawCircle(Offset(centerX, size.height * 0.18), size.height * 0.045, paint);
-
-    // Badan
-    canvas.drawLine(Offset(centerX, size.height * 0.23), Offset(centerX, size.height * 0.48), paint);
-
-    // Tangan terangkat ke atas (V shape)
-    canvas.drawLine(Offset(centerX, size.height * 0.26), Offset(centerX - size.width * 0.2, size.height * 0.1), paint);
-    canvas.drawLine(Offset(centerX, size.height * 0.26), Offset(centerX + size.width * 0.2, size.height * 0.1), paint);
-
-    // Kaki terbuka lebar
-    canvas.drawLine(Offset(centerX, size.height * 0.48), Offset(centerX - size.width * 0.22, size.height * 0.78), paint);
-    canvas.drawLine(Offset(centerX, size.height * 0.48), Offset(centerX + size.width * 0.22, size.height * 0.78), paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}

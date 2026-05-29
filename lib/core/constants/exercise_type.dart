@@ -8,6 +8,7 @@ enum ExerciseType {
   lunges,
   burpees,
   jumpingJack,
+  benchDips,
 }
 
 extension ExerciseTypeExtension on ExerciseType {
@@ -27,6 +28,8 @@ extension ExerciseTypeExtension on ExerciseType {
         return 'Burpees';
       case ExerciseType.jumpingJack:
         return 'Jumping Jack';
+      case ExerciseType.benchDips:
+        return 'Bench Dips';
     }
   }
 
@@ -46,6 +49,8 @@ extension ExerciseTypeExtension on ExerciseType {
         return Icons.directions_run;
       case ExerciseType.jumpingJack:
         return Icons.accessibility_new;
+      case ExerciseType.benchDips:
+        return Icons.event_seat;
     }
   }
 
@@ -65,6 +70,8 @@ extension ExerciseTypeExtension on ExerciseType {
         return 'Sudut Badan';
       case ExerciseType.jumpingJack:
         return 'Sudut Lengan';
+      case ExerciseType.benchDips:
+        return 'Sudut Siku';
     }
   }
 }
