@@ -5,6 +5,8 @@ import 'package:provider/provider.dart';
 import 'package:google_mlkit_pose_detection/google_mlkit_pose_detection.dart';
 import 'package:google_mlkit_selfie_segmentation/google_mlkit_selfie_segmentation.dart';
 import 'dart:io';
+import 'dart:async';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/constants/exercise_type.dart';
 import '../../services/pose_inference_service.dart';
@@ -23,12 +25,18 @@ import '../painters/pose_painter.dart';
 class CameraScreen extends StatefulWidget {
   final List<CameraDescription> cameras;
   final ExerciseType exerciseType;
+  final int targetReps;
+  final int targetSets;
+  final int restDuration;
 
   const CameraScreen({
-    Key? key,
+    super.key,
     required this.cameras,
     required this.exerciseType,
-  }) : super(key: key);
+    this.targetReps = 0,
+    this.targetSets = 1,
+    this.restDuration = 30,
+  });
 
   @override
   State<CameraScreen> createState() => _CameraScreenState();
@@ -40,6 +48,14 @@ class _CameraScreenState extends State<CameraScreen> {
   int _cameraIndex = 1;
   bool _isLandscape = false;
   DeviceOrientation _deviceOrientation = DeviceOrientation.portraitUp;
+  
+  // Set & Rest states
+  int _currentSet = 1;
+  bool _isResting = false;
+  int _restSecondsRemaining = 0;
+  Timer? _restTimer;
+  int _accumulatedReps = 0;
+  bool _isWorkoutComplete = false;
   
   bool _enableSegmentation = false;
   SegmentationMask? _currentMask;
@@ -183,8 +199,9 @@ class _CameraScreenState extends State<CameraScreen> {
             _currentMask = result.mask;
           });
           
-          if (result.poses.isNotEmpty) {
+          if (result.poses.isNotEmpty && !_isResting && !_isWorkoutComplete) {
             _processPose(result.poses.first);
+            _checkSetCompletion();
           }
         }
       });
@@ -193,6 +210,171 @@ class _CameraScreenState extends State<CameraScreen> {
     } catch (e) {
       debugPrint("Error initializing camera: $e");
     }
+  }
+
+  void _checkSetCompletion() {
+    if (widget.targetReps <= 0) return;
+    
+    final currentReps = _getRepCount();
+    if (currentReps >= widget.targetReps) {
+      if (_currentSet < widget.targetSets) {
+        _startRest(currentReps);
+      } else {
+        _completeWorkout(currentReps);
+      }
+    }
+  }
+
+  void _startRest(int repsDone) {
+    _restTimer?.cancel();
+    setState(() {
+      _accumulatedReps += repsDone;
+      _isResting = true;
+      _restSecondsRemaining = widget.restDuration;
+    });
+    
+    _restTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      if (_restSecondsRemaining > 0) {
+        setState(() {
+          _restSecondsRemaining--;
+        });
+      } else {
+        timer.cancel();
+        _finishRest();
+      }
+    });
+  }
+
+  void _finishRest() {
+    _resetProvider();
+    setState(() {
+      _currentSet++;
+      _isResting = false;
+    });
+  }
+
+  void _skipRest() {
+    _restTimer?.cancel();
+    _finishRest();
+  }
+
+  void _completeWorkout(int repsDone) {
+    setState(() {
+      _accumulatedReps += repsDone;
+      _isWorkoutComplete = true;
+    });
+    _showWorkoutCompleteDialog();
+  }
+
+  void _showWorkoutCompleteDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        final theme = Theme.of(context);
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: const Color(0xFF2C2C2C),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0xFFD95C27), width: 2),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFFD95C27).withOpacity(0.3),
+                  blurRadius: 15,
+                  spreadRadius: 2,
+                )
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.emoji_events,
+                  color: Colors.amber,
+                  size: 80,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'LATIHAN SELESAI!',
+                  style: theme.textTheme.displaySmall?.copyWith(
+                    color: const Color(0xFFD95C27),
+                    letterSpacing: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Kerja bagus! Anda telah menyelesaikan semua set latihan.',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white70),
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _buildStatItem('TOTAL SET', '${widget.targetSets}', theme),
+                    _buildStatItem('TOTAL REPS', '$_accumulatedReps', theme),
+                  ],
+                ),
+                const SizedBox(height: 30),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(context); // Close dialog
+                      Navigator.pop(this.context, _accumulatedReps); // Return to home screen
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFD95C27),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: Text(
+                      'SIMPAN & KELUAR',
+                      style: GoogleFonts.bebasNeue(
+                        fontSize: 20,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildStatItem(String label, String value, ThemeData theme) {
+    return Column(
+      children: [
+        Text(
+          label,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: Colors.grey,
+            letterSpacing: 1.0,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          value,
+          style: theme.textTheme.headlineLarge?.copyWith(
+            color: Colors.white,
+            fontSize: 32,
+          ),
+        ),
+      ],
+    );
   }
 
   void _toggleOrientation() {
@@ -476,7 +658,7 @@ class _CameraScreenState extends State<CameraScreen> {
             child: Center(
               child: ElevatedButton.icon(
                 onPressed: () {
-                  Navigator.pop(context, _getRepCount());
+                  Navigator.pop(context, _accumulatedReps + _getRepCount());
                 },
                 icon: const Icon(Icons.stop),
                 label: const Text("Selesai Latihan"),
@@ -487,13 +669,119 @@ class _CameraScreenState extends State<CameraScreen> {
                 ),
               ),
             ),
-          )
+          ),
+          if (_isResting)
+            Positioned.fill(
+              child: Container(
+                color: Colors.black.withOpacity(0.85),
+                child: Center(
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 32),
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF2C2C2C).withOpacity(0.9),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: const Color(0xFFD95C27).withOpacity(0.5), width: 1.5),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.5),
+                          blurRadius: 10,
+                          spreadRadius: 2,
+                        )
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.hourglass_empty,
+                          color: Color(0xFFD95C27),
+                          size: 60,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'ISTIRAHAT SEJENAK',
+                          style: GoogleFonts.bebasNeue(
+                            color: Colors.white,
+                            fontSize: 32,
+                            letterSpacing: 1.5,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Set $_currentSet Selesai! Tarik napas dalam-dalam.',
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.inter(
+                            color: Colors.white70,
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 32),
+                        Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            SizedBox(
+                              width: 120,
+                              height: 120,
+                              child: CircularProgressIndicator(
+                                value: _restSecondsRemaining / widget.restDuration,
+                                strokeWidth: 8,
+                                backgroundColor: Colors.white10,
+                                color: const Color(0xFFD95C27),
+                              ),
+                            ),
+                            Text(
+                              '$_restSecondsRemaining',
+                              style: GoogleFonts.bebasNeue(
+                                color: Colors.white,
+                                fontSize: 48,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 32),
+                        Text(
+                          'Bersiap untuk Set ${_currentSet + 1}',
+                          style: GoogleFonts.inter(
+                            color: Colors.white60,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        TextButton.icon(
+                          onPressed: _skipRest,
+                          icon: const Icon(Icons.skip_next, color: Color(0xFFD95C27)),
+                          label: Text(
+                            'LEWATI ISTIRAHAT',
+                            style: GoogleFonts.bebasNeue(
+                              color: const Color(0xFFD95C27),
+                              fontSize: 18,
+                              letterSpacing: 1.0,
+                            ),
+                          ),
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                            side: const BorderSide(color: Color(0xFFD95C27), width: 1.5),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
   }
 
   Widget _buildOverlayUI(String status, int reps, double angle, bool isGoodPosture, double rom, String tempo) {
+    final hasTarget = widget.targetReps > 0;
+    
     return Container(
       width: 250,
       padding: const EdgeInsets.all(15),
@@ -509,10 +797,17 @@ class _CameraScreenState extends State<CameraScreen> {
               padding: EdgeInsets.only(bottom: 8.0),
               child: Text("⚠️ Ruangan terlalu gelap!", style: TextStyle(color: Colors.redAccent, fontSize: 14, fontWeight: FontWeight.bold)),
             ),
+          if (hasTarget) ...[
+            Text(
+              "Set: $_currentSet / ${widget.targetSets}",
+              style: const TextStyle(color: Color(0xFFD95C27), fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 4),
+          ],
           Text(
             widget.exerciseType == ExerciseType.plank 
                 ? "Waktu: $reps dtk" 
-                : "Reps: $reps", 
+                : (hasTarget ? "Reps: $reps / ${widget.targetReps}" : "Reps: $reps"), 
             style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)
           ),
           const SizedBox(height: 5),
