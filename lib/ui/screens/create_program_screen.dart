@@ -2,69 +2,30 @@ import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 
 import '../../core/constants/exercise_type.dart';
-import '../../data/local/hive_service.dart';
-import '../../models/workout_session.dart';
-import '../../models/program_session.dart';
 import '../../models/exercise_config.dart';
+import '../../models/program_session.dart';
 import 'camera_screen.dart';
-import 'create_program_screen.dart';
 
-class HomeScreen extends StatefulWidget {
+class CreateProgramScreen extends StatefulWidget {
   final List<CameraDescription> cameras;
 
-  const HomeScreen({Key? key, required this.cameras}) : super(key: key);
+  const CreateProgramScreen({super.key, required this.cameras});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  State<CreateProgramScreen> createState() => _CreateProgramScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
-  List<dynamic> _allSessions = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _loadSessions();
-  }
-
-  void _loadSessions() {
-    setState(() {
-      final singleSessions = HiveService.getAllSessions();
-      final programSessions = HiveService.getAllProgramSessions();
-      
-      _allSessions = [...singleSessions, ...programSessions];
-      _allSessions.sort((a, b) => (b.date as DateTime).compareTo(a.date as DateTime));
-    });
-  }
-
-  ExerciseType _typeFromString(String type) {
-    switch (type) {
-      case 'sitUp':
-        return ExerciseType.sitUp;
-      case 'pushUp':
-        return ExerciseType.pushUp;
-      case 'shoulderTap':
-        return ExerciseType.shoulderTap;
-      case 'lunges':
-        return ExerciseType.lunges;
-      case 'burpees':
-        return ExerciseType.burpees;
-      case 'jumpingJack':
-        return ExerciseType.jumpingJack;
-      case 'benchDips':
-        return ExerciseType.benchDips;
-      case 'plank':
-        return ExerciseType.plank;
-      case 'legRaise':
-        return ExerciseType.legRaise;
-      default:
-        return ExerciseType.squat;
-    }
-  }
+class _CreateProgramScreenState extends State<CreateProgramScreen> {
+  final List<ExerciseConfig> _programList = [];
+  int _transitionRest = 60;
+  final TextEditingController _nameController = TextEditingController(
+    text: "Program Custom",
+  );
 
   void _showExercisePicker() {
     showModalBottomSheet(
       context: context,
+      backgroundColor: const Color(0xFF2C2C2C),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -78,8 +39,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 const Padding(
                   padding: EdgeInsets.only(bottom: 16),
                   child: Text(
-                    'Pilih Latihan',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    'PILIH LATIHAN',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      fontFamily: 'BebasNeue',
+                      letterSpacing: 1.2,
+                    ),
                   ),
                 ),
                 Flexible(
@@ -91,14 +58,19 @@ class _HomeScreenState extends State<HomeScreen> {
                             leading: Icon(
                               type.icon,
                               size: 32,
-                              color: Colors.blue,
+                              color: Colors.blueAccent,
                             ),
                             title: Text(
                               type.label,
-                              style: const TextStyle(fontSize: 18),
+                              style: const TextStyle(
+                                fontSize: 18,
+                                color: Colors.white,
+                              ),
                             ),
-                            subtitle: Text(_exerciseDescription(type)),
-                            trailing: const Icon(Icons.chevron_right),
+                            trailing: const Icon(
+                              Icons.add_circle_outline,
+                              color: Colors.white54,
+                            ),
                             onTap: () {
                               Navigator.pop(context);
                               _showWorkoutConfig(type);
@@ -116,31 +88,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  String _exerciseDescription(ExerciseType type) {
-    switch (type) {
-      case ExerciseType.squat:
-        return 'Latihan kaki — berdiri lalu jongkok';
-      case ExerciseType.sitUp:
-        return 'Latihan perut — rebahan lalu bangun';
-      case ExerciseType.pushUp:
-        return 'Latihan dada — push-up naik turun';
-      case ExerciseType.shoulderTap:
-        return 'Latihan bahu — tap bahu kanan-kiri bergantian';
-      case ExerciseType.lunges:
-        return 'Latihan kaki — melangkah dan turunkan pinggul bergantian kaki';
-      case ExerciseType.burpees:
-        return 'Latihan seluruh tubuh — turun plank lalu loncat berdiri';
-      case ExerciseType.jumpingJack:
-        return 'Latihan kardio — buka tutup kaki dan angkat tangan';
-      case ExerciseType.benchDips:
-        return 'Latihan tricep — duduk di bangku, turun naikkan badan';
-      case ExerciseType.plank:
-        return 'Latihan inti — tahan posisi badan lurus statis';
-      case ExerciseType.legRaise:
-        return 'Latihan perut — rebahan dan angkat lurus kedua kaki';
-    }
-  }
-
   void _showWorkoutConfig(ExerciseType type) {
     showModalBottomSheet(
       context: context,
@@ -150,190 +97,219 @@ class _HomeScreenState extends State<HomeScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
       ),
       builder: (context) {
-        return _WorkoutConfigSheet(
+        return _ProgramWorkoutConfigSheet(
           exerciseType: type,
-          onStart: (reps, sets, rest) {
+          onAdd: (reps, sets, rest) {
+            setState(() {
+              _programList.add(
+                ExerciseConfig(
+                  type: type,
+                  targetReps: reps,
+                  targetSets: sets,
+                  restDuration: rest,
+                ),
+              );
+            });
             Navigator.pop(context);
-            _startExercise(
-              type,
-              targetReps: reps,
-              targetSets: sets,
-              restDuration: rest,
-            );
           },
         );
       },
     );
   }
 
-  Future<void> _startExercise(
-    ExerciseType type, {
-    required int targetReps,
-    required int targetSets,
-    required int restDuration,
-  }) async {
-    final startTime = DateTime.now();
+  void _startProgram() async {
+    if (_programList.isEmpty) return;
+
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => CameraScreen(
           cameras: widget.cameras,
-          exerciseType: type,
-          targetReps: targetReps,
-          targetSets: targetSets,
-          restDuration: restDuration,
+          program: _programList,
+          programName: _nameController.text,
+          transitionRest: _transitionRest,
         ),
       ),
     );
 
-    if (result != null && result is int && result > 0) {
-      final reps = result;
-      final duration = DateTime.now().difference(startTime).inSeconds;
-      final session = WorkoutSession(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        date: DateTime.now(),
-        totalReps: reps,
-        durationSeconds: duration,
-        exerciseType: type.name,
-      );
-      await HiveService.saveSession(session);
-      _loadSessions();
+    if (result != null && result is List<ProgramExerciseResult>) {
+      if (mounted) {
+        Navigator.pop(context, result);
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          'Logbook Latihan',
-          style: theme.textTheme.titleLarge?.copyWith(
-            color: Colors.white,
-            letterSpacing: 1.2,
-          ),
+        title: const Text(
+          'BUAT PROGRAM LATIHAN',
+          style: TextStyle(fontFamily: 'BebasNeue', letterSpacing: 1.2),
         ),
       ),
-      body: _allSessions.isEmpty
-          ? Center(
-              child: Text(
-                "Belum ada riwayat latihan.",
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: Colors.white70,
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: TextField(
+              controller: _nameController,
+              style: const TextStyle(color: Colors.white),
+              decoration: const InputDecoration(
+                labelText: 'Nama Program',
+                labelStyle: TextStyle(color: Colors.white70),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.white30),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.blueAccent),
                 ),
               ),
-            )
-          : ListView.builder(
-              padding: const EdgeInsets.all(16.0),
-              itemCount: _allSessions.length,
-              itemBuilder: (context, index) {
-                final session = _allSessions[index];
-                
-                if (session is ProgramSession) {
-                  return Card(
-                    color: const Color(0xFF1E3A8A),
-                    margin: const EdgeInsets.only(bottom: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: ExpansionTile(
-                      leading: const Icon(Icons.playlist_play, color: Colors.white, size: 32),
-                      title: Text(
-                        session.name,
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                      ),
-                      subtitle: Text(
-                        "${session.date.toLocal().toString().split('.')[0]} • ${session.exercises.length} Gerakan",
-                        style: const TextStyle(color: Colors.white70),
-                      ),
-                      children: session.exercises.map((e) {
-                        final isPlank = e.exerciseType.toLowerCase() == 'plank';
-                        final targetText = isPlank 
-                            ? 'Target: ${e.targetSets} Set x ${e.targetReps} Detik'
-                            : 'Target: ${e.targetSets} Set x ${e.targetReps} Reps';
-                        final totalText = isPlank ? '${e.totalReps} Detik' : '${e.totalReps} Reps';
-                        
-                        return ListTile(
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
-                          title: Text(e.exerciseType.toUpperCase(), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-                          subtitle: Text(targetText, style: const TextStyle(color: Colors.white70)),
-                          trailing: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              const Text('Selesai:', style: TextStyle(color: Colors.white54, fontSize: 12)),
-                              Text(totalText, style: const TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold, fontSize: 16)),
-                            ],
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  );
-                } else if (session is WorkoutSession) {
-                  final exerciseType = _typeFromString(session.exerciseType);
-                  return Card(
-                    color: const Color(0xFF2C2C2C),
-                    margin: const EdgeInsets.only(bottom: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: ListTile(
-                      leading: Icon(exerciseType.icon, color: theme.colorScheme.primary),
-                      title: Text(
-                        exerciseType == ExerciseType.plank 
-                            ? "${exerciseType.label} - ${session.totalReps} Detik"
-                            : "${exerciseType.label} - ${session.totalReps} Reps",
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                      ),
-                      subtitle: Text(
-                        session.date.toLocal().toString().split('.')[0],
-                        style: const TextStyle(color: Colors.white70),
-                      ),
-                    ),
-                  );
-                }
-                return const SizedBox();
-              },
             ),
-      floatingActionButton: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          FloatingActionButton.extended(
-            heroTag: "btn_program",
-            onPressed: () async {
-              final result = await Navigator.push(
-                context, 
-                MaterialPageRoute(builder: (_) => CreateProgramScreen(cameras: widget.cameras))
-              );
-              if (result != null && result is List<ProgramExerciseResult>) {
-                final session = ProgramSession(
-                  id: DateTime.now().millisecondsSinceEpoch.toString(),
-                  date: DateTime.now(),
-                  name: "Program Custom",
-                  totalDurationSeconds: 0,
-                  exercises: result,
-                );
-                await HiveService.saveProgramSession(session);
-                _loadSessions();
-              }
-            },
-            icon: const Icon(Icons.list_alt),
-            label: const Text(
-              'BUAT PROGRAM',
-              style: TextStyle(fontFamily: 'BebasNeue', letterSpacing: 1.2),
-            ),
-            backgroundColor: Colors.blueAccent,
           ),
-          const SizedBox(height: 16),
-          FloatingActionButton.extended(
-            heroTag: "btn_single",
-            onPressed: _showExercisePicker,
-            icon: const Icon(Icons.play_arrow),
-            label: const Text(
-              'LATIHAN TUNGGAL',
-              style: TextStyle(fontFamily: 'BebasNeue', letterSpacing: 1.2),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    "Jeda Transisi Antar Gerakan (detik):",
+                    style: TextStyle(color: Colors.white70),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.remove, color: Colors.white),
+                  onPressed: () => setState(
+                    () => _transitionRest > 10 ? _transitionRest -= 10 : null,
+                  ),
+                ),
+                Text(
+                  '$_transitionRest',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.add, color: Colors.white),
+                  onPressed: () => setState(() => _transitionRest += 10),
+                ),
+              ],
+            ),
+          ),
+          const Divider(color: Colors.white10),
+          Expanded(
+            child: _programList.isEmpty
+                ? const Center(
+                    child: Text(
+                      "Belum ada gerakan ditambahkan.",
+                      style: TextStyle(color: Colors.white54),
+                    ),
+                  )
+                : ReorderableListView.builder(
+                    itemCount: _programList.length,
+                    onReorder: (oldIndex, newIndex) {
+                      setState(() {
+                        if (newIndex > oldIndex) newIndex -= 1;
+                        final item = _programList.removeAt(oldIndex);
+                        _programList.insert(newIndex, item);
+                      });
+                    },
+                    itemBuilder: (context, index) {
+                      final config = _programList[index];
+                      return Card(
+                        key: ValueKey(config.hashCode),
+                        color: const Color(0xFF2C2C2C),
+                        margin: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 6,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: Colors.blueAccent.withOpacity(0.2),
+                            child: Text(
+                              '${index + 1}',
+                              style: const TextStyle(
+                                color: Colors.blueAccent,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          title: Text(
+                            config.type.label,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          subtitle: Text(
+                            '${config.targetSets} Set x ${config.targetReps} Reps (Rest: ${config.restDuration}s)',
+                            style: const TextStyle(color: Colors.white70),
+                          ),
+                          trailing: IconButton(
+                            icon: const Icon(
+                              Icons.delete,
+                              color: Colors.redAccent,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _programList.removeAt(index);
+                              });
+                            },
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _showExercisePicker,
+                    icon: const Icon(Icons.add),
+                    label: const Text(
+                      'TAMBAH GERAKAN',
+                      style: TextStyle(
+                        fontFamily: 'BebasNeue',
+                        letterSpacing: 1.2,
+                        fontSize: 18,
+                      ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.blueAccent,
+                      side: const BorderSide(color: Colors.blueAccent),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _programList.isEmpty ? null : _startProgram,
+                    icon: const Icon(Icons.play_arrow),
+                    label: const Text(
+                      'MULAI PROGRAM',
+                      style: TextStyle(
+                        fontFamily: 'BebasNeue',
+                        letterSpacing: 1.2,
+                        fontSize: 18,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -342,21 +318,22 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-class _WorkoutConfigSheet extends StatefulWidget {
+class _ProgramWorkoutConfigSheet extends StatefulWidget {
   final ExerciseType exerciseType;
-  final Function(int reps, int sets, int rest) onStart;
+  final Function(int reps, int sets, int rest) onAdd;
 
-  const _WorkoutConfigSheet({
-    super.key,
+  const _ProgramWorkoutConfigSheet({
     required this.exerciseType,
-    required this.onStart,
+    required this.onAdd,
   });
 
   @override
-  State<_WorkoutConfigSheet> createState() => _WorkoutConfigSheetState();
+  State<_ProgramWorkoutConfigSheet> createState() =>
+      _ProgramWorkoutConfigSheetState();
 }
 
-class _WorkoutConfigSheetState extends State<_WorkoutConfigSheet> {
+class _ProgramWorkoutConfigSheetState
+    extends State<_ProgramWorkoutConfigSheet> {
   late int _reps;
   int _sets = 3;
   int _rest = 30;
@@ -413,6 +390,7 @@ class _WorkoutConfigSheetState extends State<_WorkoutConfigSheet> {
                       style: theme.textTheme.displaySmall?.copyWith(
                         color: Colors.white,
                         letterSpacing: 1.2,
+                        fontFamily: 'BebasNeue',
                       ),
                     ),
                   ],
@@ -463,6 +441,8 @@ class _WorkoutConfigSheetState extends State<_WorkoutConfigSheet> {
                     style: theme.textTheme.titleLarge?.copyWith(
                       color: Colors.white,
                       fontSize: 20,
+                      fontFamily: 'BebasNeue',
+                      letterSpacing: 1.2,
                     ),
                   ),
                 ),
@@ -538,6 +518,8 @@ class _WorkoutConfigSheetState extends State<_WorkoutConfigSheet> {
                     style: theme.textTheme.titleLarge?.copyWith(
                       color: Colors.white,
                       fontSize: 20,
+                      fontFamily: 'BebasNeue',
+                      letterSpacing: 1.2,
                     ),
                   ),
                 ),
@@ -613,6 +595,8 @@ class _WorkoutConfigSheetState extends State<_WorkoutConfigSheet> {
                     style: theme.textTheme.titleLarge?.copyWith(
                       color: Colors.white,
                       fontSize: 20,
+                      fontFamily: 'BebasNeue',
+                      letterSpacing: 1.2,
                     ),
                   ),
                 ),
@@ -655,11 +639,11 @@ class _WorkoutConfigSheetState extends State<_WorkoutConfigSheet> {
 
           const SizedBox(height: 32),
 
-          // Start Button
+          // Add Button
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: () => widget.onStart(_reps, _sets, _rest),
+              onPressed: () => widget.onAdd(_reps, _sets, _rest),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFD95C27),
                 foregroundColor: Colors.white,
@@ -670,11 +654,12 @@ class _WorkoutConfigSheetState extends State<_WorkoutConfigSheet> {
                 elevation: 4,
               ),
               child: Text(
-                'MULAI LATIHAN',
+                'TAMBAH KE PROGRAM',
                 style: theme.textTheme.headlineMedium?.copyWith(
                   color: Colors.white,
                   letterSpacing: 1.5,
                   fontSize: 22,
+                  fontFamily: 'BebasNeue',
                 ),
               ),
             ),

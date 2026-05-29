@@ -9,6 +9,8 @@ import 'dart:async';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/constants/exercise_type.dart';
+import '../../models/exercise_config.dart';
+import '../../models/program_session.dart';
 import '../../services/pose_inference_service.dart';
 import '../../providers/squat_provider.dart';
 import '../../providers/situp_provider.dart';
@@ -24,7 +26,14 @@ import '../painters/pose_painter.dart';
 
 class CameraScreen extends StatefulWidget {
   final List<CameraDescription> cameras;
-  final ExerciseType exerciseType;
+  
+  // Program Mode
+  final List<ExerciseConfig>? program;
+  final String? programName;
+  final int? transitionRest;
+
+  // Single Mode
+  final ExerciseType? exerciseType;
   final int targetReps;
   final int targetSets;
   final int restDuration;
@@ -32,7 +41,10 @@ class CameraScreen extends StatefulWidget {
   const CameraScreen({
     super.key,
     required this.cameras,
-    required this.exerciseType,
+    this.program,
+    this.programName,
+    this.transitionRest,
+    this.exerciseType,
     this.targetReps = 0,
     this.targetSets = 1,
     this.restDuration = 30,
@@ -49,6 +61,12 @@ class _CameraScreenState extends State<CameraScreen> {
   bool _isLandscape = false;
   DeviceOrientation _deviceOrientation = DeviceOrientation.portraitUp;
   
+  // Program states
+  int _currentProgramIndex = 0;
+  List<ProgramExerciseResult> _programResults = [];
+  bool _isTransitioning = false;
+  int _transitionSecondsRemaining = 0;
+
   // Set & Rest states
   int _currentSet = 1;
   bool _isResting = false;
@@ -56,6 +74,28 @@ class _CameraScreenState extends State<CameraScreen> {
   Timer? _restTimer;
   int _accumulatedReps = 0;
   bool _isWorkoutComplete = false;
+  
+  bool get _isProgramMode => widget.program != null && widget.program!.isNotEmpty;
+  
+  ExerciseType get _currentExerciseType {
+    if (_isProgramMode) return widget.program![_currentProgramIndex].type;
+    return widget.exerciseType ?? ExerciseType.squat;
+  }
+  
+  int get _currentTargetReps {
+    if (_isProgramMode) return widget.program![_currentProgramIndex].targetReps;
+    return widget.targetReps;
+  }
+  
+  int get _currentTargetSets {
+    if (_isProgramMode) return widget.program![_currentProgramIndex].targetSets;
+    return widget.targetSets;
+  }
+  
+  int get _currentRestDuration {
+    if (_isProgramMode) return widget.program![_currentProgramIndex].restDuration;
+    return widget.restDuration;
+  }
   
   bool _enableSegmentation = false;
   SegmentationMask? _currentMask;
@@ -78,7 +118,7 @@ class _CameraScreenState extends State<CameraScreen> {
   }
 
   void _resetProvider() {
-    switch (widget.exerciseType) {
+    switch (_currentExerciseType) {
       case ExerciseType.squat:
         context.read<SquatProvider>().reset();
         break;
@@ -113,7 +153,7 @@ class _CameraScreenState extends State<CameraScreen> {
   }
 
   void _processPose(Pose pose) {
-    switch (widget.exerciseType) {
+    switch (_currentExerciseType) {
       case ExerciseType.squat:
         context.read<SquatProvider>().processPose(pose);
         break;
@@ -148,7 +188,7 @@ class _CameraScreenState extends State<CameraScreen> {
   }
 
   int _getRepCount() {
-    switch (widget.exerciseType) {
+    switch (_currentExerciseType) {
       case ExerciseType.squat:
         return context.read<SquatProvider>().repCount;
       case ExerciseType.sitUp:
@@ -199,7 +239,7 @@ class _CameraScreenState extends State<CameraScreen> {
             _currentMask = result.mask;
           });
           
-          if (result.poses.isNotEmpty && !_isResting && !_isWorkoutComplete) {
+          if (result.poses.isNotEmpty && !_isResting && !_isTransitioning && !_isWorkoutComplete) {
             _processPose(result.poses.first);
             _checkSetCompletion();
           }
@@ -213,11 +253,11 @@ class _CameraScreenState extends State<CameraScreen> {
   }
 
   void _checkSetCompletion() {
-    if (widget.targetReps <= 0) return;
+    if ((_isProgramMode ? widget.program![_currentProgramIndex].targetReps : widget.targetReps) <= 0) return;
     
     final currentReps = _getRepCount();
-    if (currentReps >= widget.targetReps) {
-      if (_currentSet < widget.targetSets) {
+    if (currentReps >= (_isProgramMode ? widget.program![_currentProgramIndex].targetReps : widget.targetReps)) {
+      if (_currentSet < (_isProgramMode ? widget.program![_currentProgramIndex].targetSets : widget.targetSets)) {
         _startRest(currentReps);
       } else {
         _completeWorkout(currentReps);
@@ -230,7 +270,7 @@ class _CameraScreenState extends State<CameraScreen> {
     setState(() {
       _accumulatedReps += repsDone;
       _isResting = true;
-      _restSecondsRemaining = widget.restDuration;
+      _restSecondsRemaining = _currentRestDuration;
     });
     
     _restTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
@@ -265,6 +305,66 @@ class _CameraScreenState extends State<CameraScreen> {
   void _completeWorkout(int repsDone) {
     setState(() {
       _accumulatedReps += repsDone;
+    });
+    
+    if (_isProgramMode) {
+      _programResults.add(ProgramExerciseResult(
+        exerciseType: _currentExerciseType.name,
+        totalReps: _accumulatedReps,
+        targetReps: (_isProgramMode ? widget.program![_currentProgramIndex].targetReps : widget.targetReps),
+        targetSets: (_isProgramMode ? widget.program![_currentProgramIndex].targetSets : widget.targetSets),
+      ));
+      
+      if (_currentProgramIndex < widget.program!.length - 1) {
+        _startTransition();
+      } else {
+        _finishAllWorkout();
+      }
+    } else {
+      _finishAllWorkout();
+    }
+  }
+
+  void _startTransition() {
+    _restTimer?.cancel();
+    setState(() {
+      _isTransitioning = true;
+      _transitionSecondsRemaining = widget.transitionRest ?? 60;
+    });
+    
+    _restTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      if (_transitionSecondsRemaining > 0) {
+        setState(() {
+          _transitionSecondsRemaining--;
+        });
+      } else {
+        timer.cancel();
+        _finishTransition();
+      }
+    });
+  }
+
+  void _finishTransition() {
+    setState(() {
+      _isTransitioning = false;
+      _currentProgramIndex++;
+      _currentSet = 1;
+      _accumulatedReps = 0;
+    });
+    _resetProvider();
+  }
+
+  void _skipTransition() {
+    _restTimer?.cancel();
+    _finishTransition();
+  }
+
+  void _finishAllWorkout() {
+    setState(() {
       _isWorkoutComplete = true;
     });
     _showWorkoutCompleteDialog();
@@ -318,7 +418,7 @@ class _CameraScreenState extends State<CameraScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    _buildStatItem('TOTAL SET', '${widget.targetSets}', theme),
+                    _buildStatItem('TOTAL SET', '${(_isProgramMode ? widget.program![_currentProgramIndex].targetSets : widget.targetSets)}', theme),
                     _buildStatItem('TOTAL REPS', '$_accumulatedReps', theme),
                   ],
                 ),
@@ -328,7 +428,11 @@ class _CameraScreenState extends State<CameraScreen> {
                   child: ElevatedButton(
                     onPressed: () {
                       Navigator.pop(context); // Close dialog
-                      Navigator.pop(this.context, _accumulatedReps); // Return to home screen
+                      if (_isProgramMode) {
+                        Navigator.pop(this.context, _programResults);
+                      } else {
+                        Navigator.pop(this.context, _accumulatedReps);
+                      }
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFD95C27),
@@ -411,7 +515,7 @@ class _CameraScreenState extends State<CameraScreen> {
 
   // --- Helper getters untuk data dari provider aktif ---
   String _getStatus(BuildContext context) {
-    switch (widget.exerciseType) {
+    switch (_currentExerciseType) {
       case ExerciseType.squat:
         return context.select<SquatProvider, String>((p) => p.status);
       case ExerciseType.sitUp:
@@ -436,7 +540,7 @@ class _CameraScreenState extends State<CameraScreen> {
   }
 
   int _getReps(BuildContext context) {
-    switch (widget.exerciseType) {
+    switch (_currentExerciseType) {
       case ExerciseType.squat:
         return context.select<SquatProvider, int>((p) => p.repCount);
       case ExerciseType.sitUp:
@@ -461,7 +565,7 @@ class _CameraScreenState extends State<CameraScreen> {
   }
 
   double _getAngle(BuildContext context) {
-    switch (widget.exerciseType) {
+    switch (_currentExerciseType) {
       case ExerciseType.squat:
         return context.select<SquatProvider, double>((p) => p.kneeAngle);
       case ExerciseType.sitUp:
@@ -486,7 +590,7 @@ class _CameraScreenState extends State<CameraScreen> {
   }
 
   bool _getIsGoodPosture(BuildContext context) {
-    switch (widget.exerciseType) {
+    switch (_currentExerciseType) {
       case ExerciseType.squat:
         return context.select<SquatProvider, bool>((p) => p.isGoodPosture);
       case ExerciseType.sitUp:
@@ -511,7 +615,7 @@ class _CameraScreenState extends State<CameraScreen> {
   }
 
   Pose? _getCurrentPose(BuildContext context) {
-    switch (widget.exerciseType) {
+    switch (_currentExerciseType) {
       case ExerciseType.squat:
         return context.select<SquatProvider, Pose?>((p) => p.currentPose);
       case ExerciseType.sitUp:
@@ -536,7 +640,7 @@ class _CameraScreenState extends State<CameraScreen> {
   }
 
   double _getRom(BuildContext context) {
-    switch (widget.exerciseType) {
+    switch (_currentExerciseType) {
       case ExerciseType.squat: return context.select<SquatProvider, double>((p) => p.romPercentage);
       case ExerciseType.sitUp: return context.select<SitUpProvider, double>((p) => p.romPercentage);
       case ExerciseType.pushUp: return context.select<PushUpProvider, double>((p) => p.romPercentage);
@@ -551,7 +655,7 @@ class _CameraScreenState extends State<CameraScreen> {
   }
   
   String _getTempo(BuildContext context) {
-    switch (widget.exerciseType) {
+    switch (_currentExerciseType) {
       case ExerciseType.squat: return context.select<SquatProvider, String>((p) => p.tempoStatus);
       case ExerciseType.sitUp: return context.select<SitUpProvider, String>((p) => p.tempoStatus);
       case ExerciseType.pushUp: return context.select<PushUpProvider, String>((p) => p.tempoStatus);
@@ -566,7 +670,7 @@ class _CameraScreenState extends State<CameraScreen> {
   }
 
   List<Offset> _getTrajectory(BuildContext context) {
-    switch (widget.exerciseType) {
+    switch (_currentExerciseType) {
       case ExerciseType.squat: return context.select<SquatProvider, List<Offset>>((p) => p.trajectoryPoints);
       case ExerciseType.sitUp: return context.select<SitUpProvider, List<Offset>>((p) => p.trajectoryPoints);
       case ExerciseType.pushUp: return context.select<PushUpProvider, List<Offset>>((p) => p.trajectoryPoints);
@@ -602,7 +706,7 @@ class _CameraScreenState extends State<CameraScreen> {
     
     return Scaffold(
       appBar: AppBar(
-        title: Text("${widget.exerciseType.label} Counter"),
+        title: Text("${_currentExerciseType.label} Counter"),
         actions: [
           IconButton(
             onPressed: () {
@@ -658,7 +762,11 @@ class _CameraScreenState extends State<CameraScreen> {
             child: Center(
               child: ElevatedButton.icon(
                 onPressed: () {
-                  Navigator.pop(context, _accumulatedReps + _getRepCount());
+                  if (_isProgramMode) {
+                    Navigator.pop(context, _programResults);
+                  } else {
+                    Navigator.pop(context, _accumulatedReps + _getRepCount());
+                  }
                 },
                 icon: const Icon(Icons.stop),
                 label: const Text("Selesai Latihan"),
@@ -670,7 +778,61 @@ class _CameraScreenState extends State<CameraScreen> {
               ),
             ),
           ),
-          if (_isResting)
+          if (_isTransitioning)
+            Positioned.fill(
+              child: Container(
+                color: Colors.black.withOpacity(0.9),
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.change_circle, color: Colors.blueAccent, size: 80),
+                      const SizedBox(height: 20),
+                      Text(
+                        'PERSIAPKAN GERAKAN BERIKUTNYA',
+                        style: GoogleFonts.bebasNeue(color: Colors.white, fontSize: 32),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        widget.program![_currentProgramIndex + 1].type.label,
+                        style: GoogleFonts.bebasNeue(color: Colors.blueAccent, fontSize: 48),
+                      ),
+                      const SizedBox(height: 30),
+                      Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          SizedBox(
+                            width: 120,
+                            height: 120,
+                            child: CircularProgressIndicator(
+                              value: _transitionSecondsRemaining / (widget.transitionRest ?? 60),
+                              strokeWidth: 8,
+                              backgroundColor: Colors.white10,
+                              color: Colors.blueAccent,
+                            ),
+                          ),
+                          Text(
+                            '$_transitionSecondsRemaining',
+                            style: GoogleFonts.bebasNeue(color: Colors.white, fontSize: 48),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 40),
+                      TextButton.icon(
+                        onPressed: _skipTransition,
+                        icon: const Icon(Icons.skip_next, color: Colors.blueAccent),
+                        label: Text('MULAI SEKARANG', style: GoogleFonts.bebasNeue(color: Colors.blueAccent, fontSize: 20)),
+                        style: TextButton.styleFrom(
+                          side: const BorderSide(color: Colors.blueAccent, width: 2),
+                          padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                        ),
+                      )
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          if (_isResting && !_isTransitioning)
             Positioned.fill(
               child: Container(
                 color: Colors.black.withOpacity(0.85),
@@ -724,7 +886,7 @@ class _CameraScreenState extends State<CameraScreen> {
                               width: 120,
                               height: 120,
                               child: CircularProgressIndicator(
-                                value: _restSecondsRemaining / widget.restDuration,
+                                value: _restSecondsRemaining / _currentRestDuration,
                                 strokeWidth: 8,
                                 backgroundColor: Colors.white10,
                                 color: const Color(0xFFD95C27),
@@ -780,7 +942,7 @@ class _CameraScreenState extends State<CameraScreen> {
   }
 
   Widget _buildOverlayUI(String status, int reps, double angle, bool isGoodPosture, double rom, String tempo) {
-    final hasTarget = widget.targetReps > 0;
+    final hasTarget = (_isProgramMode ? widget.program![_currentProgramIndex].targetReps : widget.targetReps) > 0;
     
     return Container(
       width: 250,
@@ -799,15 +961,15 @@ class _CameraScreenState extends State<CameraScreen> {
             ),
           if (hasTarget) ...[
             Text(
-              "Set: $_currentSet / ${widget.targetSets}",
+              "Set: $_currentSet / ${(_isProgramMode ? widget.program![_currentProgramIndex].targetSets : widget.targetSets)}",
               style: const TextStyle(color: Color(0xFFD95C27), fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 4),
           ],
           Text(
-            widget.exerciseType == ExerciseType.plank 
+            _currentExerciseType == ExerciseType.plank 
                 ? "Waktu: $reps dtk" 
-                : (hasTarget ? "Reps: $reps / ${widget.targetReps}" : "Reps: $reps"), 
+                : (hasTarget ? "Reps: $reps / ${(_isProgramMode ? widget.program![_currentProgramIndex].targetReps : widget.targetReps)}" : "Reps: $reps"), 
             style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)
           ),
           const SizedBox(height: 5),
@@ -821,7 +983,7 @@ class _CameraScreenState extends State<CameraScreen> {
           ),
           const SizedBox(height: 5),
           Text(
-            "${widget.exerciseType.angleLabel}: ${angle.toStringAsFixed(0)}°", 
+            "${_currentExerciseType.angleLabel}: ${angle.toStringAsFixed(0)}°", 
             style: const TextStyle(color: Colors.grey, fontSize: 14)
           ),
           if (tempo.isNotEmpty) ...[

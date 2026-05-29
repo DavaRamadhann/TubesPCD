@@ -12,7 +12,7 @@ class ShoulderTapProvider extends ChangeNotifier {
   double _plankAngle = 0.0;
   bool _isValidRep = false;
   bool _hasStarted = false;
-  
+
   // Advanced PCD Features
   double _romPercentage = 0.0;
   String _tempoStatus = "";
@@ -78,9 +78,12 @@ class ShoulderTapProvider extends ChangeNotifier {
     }
 
     // --- Validasi landmark ---
-    if (leftShoulder == null || rightShoulder == null || 
-        leftWrist == null || rightWrist == null ||
-        leftHip == null || leftAnkle == null) {
+    if (leftShoulder == null ||
+        rightShoulder == null ||
+        leftWrist == null ||
+        rightWrist == null ||
+        leftHip == null ||
+        leftAnkle == null) {
       _status = "Tubuh tidak terlihat utuh";
       _isGoodPosture = false;
       notifyListeners();
@@ -117,7 +120,8 @@ class ShoulderTapProvider extends ChangeNotifier {
     }
 
     // CHECK 2: Jaga Pundak Tetap Sejajar (Menghindari miring berlebih)
-    final shoulderSlope = (leftShoulder.y - rightShoulder.y).abs() / shoulderWidth;
+    final shoulderSlope =
+        (leftShoulder.y - rightShoulder.y).abs() / shoulderWidth;
     if (shoulderSlope > 0.35) {
       _status = "Jaga posisi pundak tetap sejajar!";
       _isGoodPosture = false;
@@ -135,15 +139,20 @@ class ShoulderTapProvider extends ChangeNotifier {
     // --- Perhitungan ROM (Range of Motion) ---
     // Ketika tangan menempel di lantai, jarak wrist-oppositeShoulder sekitar 1.2 * shoulderWidth
     // Ketika menepuk bahu, jarak mengecil hingga di bawah 0.6 * shoulderWidth
-    final minDist = math.min(distRightHandToLeftShoulder, distLeftHandToRightShoulder);
+    final minDist = math.min(
+      distRightHandToLeftShoulder,
+      distLeftHandToRightShoulder,
+    );
     final maxDist = shoulderWidth * 1.2;
     final targetDist = shoulderWidth * 0.55;
-    
+
     double rom = ((maxDist - minDist) / (maxDist - targetDist)) * 100;
     _romPercentage = rom.clamp(0.0, 100.0);
 
-    const double tapThreshold = 0.6; // Sentuhan dianggap valid jika jarak < 0.6 * lebar bahu
-    const double floorThreshold = 1.0; // Tangan dianggap kembali ke lantai jika jarak > 1.0 * lebar bahu
+    const double tapThreshold =
+        0.6; // Sentuhan dianggap valid jika jarak < 0.6 * lebar bahu
+    const double floorThreshold =
+        1.0; // Tangan dianggap kembali ke lantai jika jarak > 1.0 * lebar bahu
 
     _analyzeShoulderTapState(
       distRightHandToLeftShoulder,
@@ -221,8 +230,8 @@ class ShoulderTapProvider extends ChangeNotifier {
   }
 
   double _calculateAngle(PoseLandmark a, PoseLandmark b, PoseLandmark c) {
-    final radians = math.atan2(c.y - b.y, c.x - b.x) -
-        math.atan2(a.y - b.y, a.x - b.x);
+    final radians =
+        math.atan2(c.y - b.y, c.x - b.x) - math.atan2(a.y - b.y, a.x - b.x);
     var angle = radians * 180 / math.pi;
     angle = angle.abs();
     if (angle > 180) angle = 360 - angle;
