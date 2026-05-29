@@ -46,6 +46,8 @@ class _HomeScreenState extends State<HomeScreen> {
         return ExerciseType.jumpingJack;
       case 'benchDips':
         return ExerciseType.benchDips;
+      case 'plank':
+        return ExerciseType.plank;
       default:
         return ExerciseType.squat;
     }
@@ -112,6 +114,8 @@ class _HomeScreenState extends State<HomeScreen> {
         return 'Latihan kardio — buka tutup kaki dan angkat tangan';
       case ExerciseType.benchDips:
         return 'Latihan tricep — duduk di bangku, turun naikkan badan';
+      case ExerciseType.plank:
+        return 'Latihan inti — tahan posisi badan lurus statis';
     }
   }
 
@@ -179,7 +183,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: ListTile(
                     leading: Icon(exerciseType.icon, color: theme.colorScheme.primary),
                     title: Text(
-                      "${exerciseType.label} - ${session.totalReps} Reps",
+                      exerciseType == ExerciseType.plank 
+                          ? "${exerciseType.label} - ${session.totalReps} Detik"
+                          : "${exerciseType.label} - ${session.totalReps} Reps",
                       style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                     ),
                     subtitle: Text(

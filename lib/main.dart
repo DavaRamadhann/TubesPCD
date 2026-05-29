@@ -13,6 +13,7 @@ import 'providers/lunges_provider.dart';
 import 'providers/burpees_provider.dart';
 import 'providers/jumpingjack_provider.dart';
 import 'providers/benchdips_provider.dart';
+import 'providers/plank_provider.dart';
 import 'ui/screens/home_screen.dart';
 
 void main() async {
@@ -43,6 +44,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => BurpeesProvider()),
         ChangeNotifierProvider(create: (_) => JumpingJackProvider()),
         ChangeNotifierProvider(create: (_) => BenchDipsProvider()),
+        ChangeNotifierProvider(create: (_) => PlankProvider()),
       ],
       child: MaterialApp(
         title: 'Workout Counter AI',
