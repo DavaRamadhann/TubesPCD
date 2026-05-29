@@ -14,6 +14,7 @@ import '../../providers/pushup_provider.dart';
 import '../../providers/shouldertap_provider.dart';
 import '../../providers/lunges_provider.dart';
 import '../../providers/burpees_provider.dart';
+import '../../providers/jumpingjack_provider.dart';
 import '../painters/pose_painter.dart';
 
 class CameraScreen extends StatefulWidget {
@@ -77,6 +78,9 @@ class _CameraScreenState extends State<CameraScreen> {
       case ExerciseType.burpees:
         context.read<BurpeesProvider>().reset();
         break;
+      case ExerciseType.jumpingJack:
+        context.read<JumpingJackProvider>().reset();
+        break;
     }
   }
 
@@ -100,6 +104,9 @@ class _CameraScreenState extends State<CameraScreen> {
       case ExerciseType.burpees:
         context.read<BurpeesProvider>().processPose(pose);
         break;
+      case ExerciseType.jumpingJack:
+        context.read<JumpingJackProvider>().processPose(pose);
+        break;
     }
   }
 
@@ -117,6 +124,8 @@ class _CameraScreenState extends State<CameraScreen> {
         return context.read<LungesProvider>().repCount;
       case ExerciseType.burpees:
         return context.read<BurpeesProvider>().repCount;
+      case ExerciseType.jumpingJack:
+        return context.read<JumpingJackProvider>().repCount;
     }
   }
 
@@ -206,6 +215,8 @@ class _CameraScreenState extends State<CameraScreen> {
         return context.select<LungesProvider, String>((p) => p.status);
       case ExerciseType.burpees:
         return context.select<BurpeesProvider, String>((p) => p.status);
+      case ExerciseType.jumpingJack:
+        return context.select<JumpingJackProvider, String>((p) => p.status);
     }
   }
 
@@ -223,6 +234,8 @@ class _CameraScreenState extends State<CameraScreen> {
         return context.select<LungesProvider, int>((p) => p.repCount);
       case ExerciseType.burpees:
         return context.select<BurpeesProvider, int>((p) => p.repCount);
+      case ExerciseType.jumpingJack:
+        return context.select<JumpingJackProvider, int>((p) => p.repCount);
     }
   }
 
@@ -240,6 +253,8 @@ class _CameraScreenState extends State<CameraScreen> {
         return context.select<LungesProvider, double>((p) => p.kneeAngle);
       case ExerciseType.burpees:
         return context.select<BurpeesProvider, double>((p) => p.torsoAngle);
+      case ExerciseType.jumpingJack:
+        return context.select<JumpingJackProvider, double>((p) => p.armAngle);
     }
   }
 
@@ -257,6 +272,8 @@ class _CameraScreenState extends State<CameraScreen> {
         return context.select<LungesProvider, bool>((p) => p.isGoodPosture);
       case ExerciseType.burpees:
         return context.select<BurpeesProvider, bool>((p) => p.isGoodPosture);
+      case ExerciseType.jumpingJack:
+        return context.select<JumpingJackProvider, bool>((p) => p.isGoodPosture);
     }
   }
 
@@ -274,6 +291,8 @@ class _CameraScreenState extends State<CameraScreen> {
         return context.select<LungesProvider, bool>((p) => p.hasStarted);
       case ExerciseType.burpees:
         return context.select<BurpeesProvider, bool>((p) => p.hasStarted);
+      case ExerciseType.jumpingJack:
+        return context.select<JumpingJackProvider, bool>((p) => p.hasStarted);
     }
   }
 
@@ -291,6 +310,8 @@ class _CameraScreenState extends State<CameraScreen> {
         return context.select<LungesProvider, Pose?>((p) => p.currentPose);
       case ExerciseType.burpees:
         return context.select<BurpeesProvider, Pose?>((p) => p.currentPose);
+      case ExerciseType.jumpingJack:
+        return context.select<JumpingJackProvider, Pose?>((p) => p.currentPose);
     }
   }
 
@@ -302,6 +323,7 @@ class _CameraScreenState extends State<CameraScreen> {
       case ExerciseType.shoulderTap: return context.select<ShoulderTapProvider, double>((p) => p.romPercentage);
       case ExerciseType.lunges: return context.select<LungesProvider, double>((p) => p.romPercentage);
       case ExerciseType.burpees: return context.select<BurpeesProvider, double>((p) => p.romPercentage);
+      case ExerciseType.jumpingJack: return context.select<JumpingJackProvider, double>((p) => p.romPercentage);
     }
   }
   
@@ -313,6 +335,7 @@ class _CameraScreenState extends State<CameraScreen> {
       case ExerciseType.shoulderTap: return context.select<ShoulderTapProvider, String>((p) => p.tempoStatus);
       case ExerciseType.lunges: return context.select<LungesProvider, String>((p) => p.tempoStatus);
       case ExerciseType.burpees: return context.select<BurpeesProvider, String>((p) => p.tempoStatus);
+      case ExerciseType.jumpingJack: return context.select<JumpingJackProvider, String>((p) => p.tempoStatus);
     }
   }
 
@@ -324,6 +347,7 @@ class _CameraScreenState extends State<CameraScreen> {
       case ExerciseType.shoulderTap: return context.select<ShoulderTapProvider, List<Offset>>((p) => p.trajectoryPoints);
       case ExerciseType.lunges: return context.select<LungesProvider, List<Offset>>((p) => p.trajectoryPoints);
       case ExerciseType.burpees: return context.select<BurpeesProvider, List<Offset>>((p) => p.trajectoryPoints);
+      case ExerciseType.jumpingJack: return context.select<JumpingJackProvider, List<Offset>>((p) => p.trajectoryPoints);
     }
   }
 
@@ -442,6 +466,8 @@ class _CameraScreenState extends State<CameraScreen> {
         return LungesSilhouettePainter();
       case ExerciseType.burpees:
         return BurpeesSilhouettePainter();
+      case ExerciseType.jumpingJack:
+        return JumpingJackSilhouettePainter();
     }
   }
 
@@ -752,6 +778,36 @@ class BurpeesSilhouettePainter extends CustomPainter {
     // Kaki (Dibuka sedikit, pose siap loncat/squat)
     canvas.drawLine(Offset(centerX, size.height * 0.55), Offset(centerX - size.width * 0.1, size.height * 0.8), paint);
     canvas.drawLine(Offset(centerX, size.height * 0.55), Offset(centerX + size.width * 0.1, size.height * 0.8), paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class JumpingJackSilhouettePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white.withOpacity(0.5)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 6
+      ..strokeCap = StrokeCap.round;
+
+    final centerX = size.width / 2;
+
+    // Kepala
+    canvas.drawCircle(Offset(centerX, size.height * 0.18), size.height * 0.045, paint);
+
+    // Badan
+    canvas.drawLine(Offset(centerX, size.height * 0.23), Offset(centerX, size.height * 0.48), paint);
+
+    // Tangan terangkat ke atas (V shape)
+    canvas.drawLine(Offset(centerX, size.height * 0.26), Offset(centerX - size.width * 0.2, size.height * 0.1), paint);
+    canvas.drawLine(Offset(centerX, size.height * 0.26), Offset(centerX + size.width * 0.2, size.height * 0.1), paint);
+
+    // Kaki terbuka lebar
+    canvas.drawLine(Offset(centerX, size.height * 0.48), Offset(centerX - size.width * 0.22, size.height * 0.78), paint);
+    canvas.drawLine(Offset(centerX, size.height * 0.48), Offset(centerX + size.width * 0.22, size.height * 0.78), paint);
   }
 
   @override

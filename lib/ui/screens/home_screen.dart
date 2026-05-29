@@ -42,6 +42,8 @@ class _HomeScreenState extends State<HomeScreen> {
         return ExerciseType.lunges;
       case 'burpees':
         return ExerciseType.burpees;
+      case 'jumpingJack':
+        return ExerciseType.jumpingJack;
       default:
         return ExerciseType.squat;
     }
@@ -60,21 +62,28 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text(
-                  'Pilih Latihan',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 16),
+                  child: Text(
+                    'Pilih Latihan',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
                 ),
-                const SizedBox(height: 16),
-                ...ExerciseType.values.map((type) => ListTile(
-                  leading: Icon(type.icon, size: 32, color: Colors.blue),
-                  title: Text(type.label, style: const TextStyle(fontSize: 18)),
-                  subtitle: Text(_exerciseDescription(type)),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _startExercise(type);
-                  },
-                )),
+                Flexible(
+                  child: ListView(
+                    shrinkWrap: true,
+                    children: ExerciseType.values.map((type) => ListTile(
+                      leading: Icon(type.icon, size: 32, color: Colors.blue),
+                      title: Text(type.label, style: const TextStyle(fontSize: 18)),
+                      subtitle: Text(_exerciseDescription(type)),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () {
+                        Navigator.pop(context);
+                        _startExercise(type);
+                      },
+                    )).toList(),
+                  ),
+                ),
               ],
             ),
           ),
@@ -97,6 +106,8 @@ class _HomeScreenState extends State<HomeScreen> {
         return 'Latihan kaki — melangkah dan turunkan pinggul bergantian kaki';
       case ExerciseType.burpees:
         return 'Latihan seluruh tubuh — turun plank lalu loncat berdiri';
+      case ExerciseType.jumpingJack:
+        return 'Latihan kardio — buka tutup kaki dan angkat tangan';
     }
   }
 
