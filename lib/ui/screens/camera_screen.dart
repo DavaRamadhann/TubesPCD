@@ -17,6 +17,7 @@ import '../../providers/burpees_provider.dart';
 import '../../providers/jumpingjack_provider.dart';
 import '../../providers/benchdips_provider.dart';
 import '../../providers/plank_provider.dart';
+import '../../providers/legraise_provider.dart';
 import '../painters/pose_painter.dart';
 
 class CameraScreen extends StatefulWidget {
@@ -89,6 +90,9 @@ class _CameraScreenState extends State<CameraScreen> {
       case ExerciseType.plank:
         context.read<PlankProvider>().reset();
         break;
+      case ExerciseType.legRaise:
+        context.read<LegRaiseProvider>().reset();
+        break;
     }
   }
 
@@ -121,6 +125,9 @@ class _CameraScreenState extends State<CameraScreen> {
       case ExerciseType.plank:
         context.read<PlankProvider>().processPose(pose);
         break;
+      case ExerciseType.legRaise:
+        context.read<LegRaiseProvider>().processPose(pose);
+        break;
     }
   }
 
@@ -144,6 +151,8 @@ class _CameraScreenState extends State<CameraScreen> {
         return context.read<BenchDipsProvider>().repCount;
       case ExerciseType.plank:
         return context.read<PlankProvider>().repCount;
+      case ExerciseType.legRaise:
+        return context.read<LegRaiseProvider>().repCount;
     }
   }
 
@@ -239,6 +248,8 @@ class _CameraScreenState extends State<CameraScreen> {
         return context.select<BenchDipsProvider, String>((p) => p.status);
       case ExerciseType.plank:
         return context.select<PlankProvider, String>((p) => p.status);
+      case ExerciseType.legRaise:
+        return context.select<LegRaiseProvider, String>((p) => p.status);
     }
   }
 
@@ -262,6 +273,8 @@ class _CameraScreenState extends State<CameraScreen> {
         return context.select<BenchDipsProvider, int>((p) => p.repCount);
       case ExerciseType.plank:
         return context.select<PlankProvider, int>((p) => p.repCount);
+      case ExerciseType.legRaise:
+        return context.select<LegRaiseProvider, int>((p) => p.repCount);
     }
   }
 
@@ -285,6 +298,8 @@ class _CameraScreenState extends State<CameraScreen> {
         return context.select<BenchDipsProvider, double>((p) => p.elbowAngle);
       case ExerciseType.plank:
         return context.select<PlankProvider, double>((p) => p.plankAngle);
+      case ExerciseType.legRaise:
+        return context.select<LegRaiseProvider, double>((p) => p.hipAngle);
     }
   }
 
@@ -308,6 +323,8 @@ class _CameraScreenState extends State<CameraScreen> {
         return context.select<BenchDipsProvider, bool>((p) => p.isGoodPosture);
       case ExerciseType.plank:
         return context.select<PlankProvider, bool>((p) => p.isGoodPosture);
+      case ExerciseType.legRaise:
+        return context.select<LegRaiseProvider, bool>((p) => p.isGoodPosture);
     }
   }
 
@@ -331,6 +348,8 @@ class _CameraScreenState extends State<CameraScreen> {
         return context.select<BenchDipsProvider, Pose?>((p) => p.currentPose);
       case ExerciseType.plank:
         return context.select<PlankProvider, Pose?>((p) => p.currentPose);
+      case ExerciseType.legRaise:
+        return context.select<LegRaiseProvider, Pose?>((p) => p.currentPose);
     }
   }
 
@@ -345,6 +364,7 @@ class _CameraScreenState extends State<CameraScreen> {
       case ExerciseType.jumpingJack: return context.select<JumpingJackProvider, double>((p) => p.romPercentage);
       case ExerciseType.benchDips: return context.select<BenchDipsProvider, double>((p) => p.romPercentage);
       case ExerciseType.plank: return context.select<PlankProvider, double>((p) => p.romPercentage);
+      case ExerciseType.legRaise: return context.select<LegRaiseProvider, double>((p) => p.romPercentage);
     }
   }
   
@@ -359,6 +379,7 @@ class _CameraScreenState extends State<CameraScreen> {
       case ExerciseType.jumpingJack: return context.select<JumpingJackProvider, String>((p) => p.tempoStatus);
       case ExerciseType.benchDips: return context.select<BenchDipsProvider, String>((p) => p.tempoStatus);
       case ExerciseType.plank: return context.select<PlankProvider, String>((p) => p.tempoStatus);
+      case ExerciseType.legRaise: return context.select<LegRaiseProvider, String>((p) => p.tempoStatus);
     }
   }
 
@@ -373,6 +394,7 @@ class _CameraScreenState extends State<CameraScreen> {
       case ExerciseType.jumpingJack: return context.select<JumpingJackProvider, List<Offset>>((p) => p.trajectoryPoints);
       case ExerciseType.benchDips: return context.select<BenchDipsProvider, List<Offset>>((p) => p.trajectoryPoints);
       case ExerciseType.plank: return context.select<PlankProvider, List<Offset>>((p) => p.trajectoryPoints);
+      case ExerciseType.legRaise: return context.select<LegRaiseProvider, List<Offset>>((p) => p.trajectoryPoints);
     }
   }
 

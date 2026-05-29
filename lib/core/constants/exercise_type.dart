@@ -10,6 +10,7 @@ enum ExerciseType {
   jumpingJack,
   benchDips,
   plank,
+  legRaise,
 }
 
 extension ExerciseTypeExtension on ExerciseType {
@@ -33,6 +34,8 @@ extension ExerciseTypeExtension on ExerciseType {
         return 'Bench Dips';
       case ExerciseType.plank:
         return 'Plank';
+      case ExerciseType.legRaise:
+        return 'Leg Raise';
     }
   }
 
@@ -56,6 +59,8 @@ extension ExerciseTypeExtension on ExerciseType {
         return Icons.event_seat;
       case ExerciseType.plank:
         return Icons.sports_gymnastics;
+      case ExerciseType.legRaise:
+        return Icons.airline_seat_flat_angled;
     }
   }
 
@@ -79,6 +84,8 @@ extension ExerciseTypeExtension on ExerciseType {
         return 'Sudut Siku';
       case ExerciseType.plank:
         return 'Sudut Badan';
+      case ExerciseType.legRaise:
+        return 'Sudut Pinggul';
     }
   }
 }

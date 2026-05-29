@@ -48,6 +48,8 @@ class _HomeScreenState extends State<HomeScreen> {
         return ExerciseType.benchDips;
       case 'plank':
         return ExerciseType.plank;
+      case 'legRaise':
+        return ExerciseType.legRaise;
       default:
         return ExerciseType.squat;
     }
@@ -116,6 +118,8 @@ class _HomeScreenState extends State<HomeScreen> {
         return 'Latihan tricep — duduk di bangku, turun naikkan badan';
       case ExerciseType.plank:
         return 'Latihan inti — tahan posisi badan lurus statis';
+      case ExerciseType.legRaise:
+        return 'Latihan perut — rebahan dan angkat lurus kedua kaki';
     }
   }
 
