@@ -7,6 +7,7 @@ import '../../services/video_frame_extractor.dart';
 import '../../core/analysis/video_form_analyzer.dart';
 import '../../services/pose_inference_service.dart';
 import '../../core/constants/exercise_type.dart';
+import '../painters/pose_painter.dart';
 
 class VideoFormCheckerScreen extends StatefulWidget {
   final bool isActive;
@@ -21,6 +22,7 @@ class _VideoFormCheckerScreenState extends State<VideoFormCheckerScreen> {
   VideoPlayerController? _videoController;
 
   bool _isAnalyzing = false;
+  double _analysisProgress = 0.0;
   bool _isTrimming = false;
   VideoAnalysisResult? _result;
   String? _videoPath;
@@ -29,6 +31,7 @@ class _VideoFormCheckerScreenState extends State<VideoFormCheckerScreen> {
   RangeValues _trimRange = const RangeValues(0, 0);
   late PoseInferenceService _poseService;
   late VideoFormAnalyzer _analyzer;
+  final ValueNotifier<int> _currentFrameIndex = ValueNotifier<int>(0);
 
   @override
   void initState() {
@@ -96,6 +99,7 @@ class _VideoFormCheckerScreenState extends State<VideoFormCheckerScreen> {
     setState(() {
       _isAnalyzing = true;
       _isTrimming = false;
+      _analysisProgress = 0.0;
     });
 
     try {
@@ -119,7 +123,17 @@ class _VideoFormCheckerScreenState extends State<VideoFormCheckerScreen> {
 
       if (frames != null && frames.isNotEmpty) {
         // 2. Analyze frames
-        final result = await _analyzer.analyzeFrames(frames, _selectedExercise);
+        final result = await _analyzer.analyzeFrames(
+          frames, 
+          _selectedExercise,
+          onProgress: (progress) {
+            if (mounted) {
+              setState(() {
+                _analysisProgress = progress;
+              });
+            }
+          }
+        );
 
         // 3. Cleanup temp frames
         await VideoFrameExtractor.cleanupFrames(frames);
@@ -130,6 +144,10 @@ class _VideoFormCheckerScreenState extends State<VideoFormCheckerScreen> {
           _videoController?.dispose();
           _videoController = VideoPlayerController.file(File(trimmedVideoPath));
           await _videoController!.initialize();
+
+          // Tambahkan listener untuk sinkronisasi frame
+          _videoController!.addListener(_onVideoProgress);
+
           _videoController!.setLooping(true);
           _videoController!.play();
 
@@ -159,6 +177,24 @@ class _VideoFormCheckerScreenState extends State<VideoFormCheckerScreen> {
         setState(() {
           _isAnalyzing = false;
         });
+      }
+    }
+  }
+
+  void _onVideoProgress() {
+    if (_videoController != null &&
+        _videoController!.value.isPlaying &&
+        _result != null) {
+      final posMs = _videoController!.value.position.inMilliseconds;
+      int index = (posMs / 1000.0 * _result!.fps).round();
+
+      if (index < 0) index = 0;
+      if (index >= _result!.frameData.length) {
+        index = _result!.frameData.length - 1;
+      }
+
+      if (_currentFrameIndex.value != index) {
+        _currentFrameIndex.value = index;
       }
     }
   }
@@ -265,12 +301,77 @@ class _VideoFormCheckerScreenState extends State<VideoFormCheckerScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (_videoController != null && _videoController!.value.isInitialized)
-            AspectRatio(
-              aspectRatio: _videoController!.value.aspectRatio,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: VideoPlayer(_videoController!),
-              ),
+            ValueListenableBuilder<int>(
+              valueListenable: _currentFrameIndex,
+              builder: (context, frameIndex, child) {
+                FrameAnalysisData? currentFrameData;
+                if (_result!.frameData.isNotEmpty &&
+                    frameIndex < _result!.frameData.length) {
+                  currentFrameData = _result!.frameData[frameIndex];
+                }
+
+                return Column(
+                  children: [
+                    Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        AspectRatio(
+                          aspectRatio: _videoController!.value.aspectRatio,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: VideoPlayer(_videoController!),
+                          ),
+                        ),
+                        if (currentFrameData != null)
+                          Positioned.fill(
+                            child: CustomPaint(
+                              painter: PosePainter(
+                                currentFrameData.pose,
+                                _videoController!.value.size,
+                                currentFrameData.isGoodPosture,
+                                const [],
+                                null,
+                                false, // Matikan mirroring untuk video
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    // Live Status & Reps Indicator
+                    if (currentFrameData != null)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 12,
+                        ),
+                        decoration: BoxDecoration(
+                          color: currentFrameData.isGoodPosture
+                              ? Colors.green.withOpacity(0.15)
+                              : Colors.red.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(30),
+                          border: Border.all(
+                            color: currentFrameData.isGoodPosture
+                                ? Colors.green
+                                : Colors.red,
+                            width: 2,
+                          ),
+                        ),
+                        child: Text(
+                          "Reps: ${currentFrameData.repCount}",
+                          style: TextStyle(
+                            color: currentFrameData.isGoodPosture
+                                ? Colors.greenAccent
+                                : Colors.redAccent,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                            letterSpacing: 1.1,
+                          ),
+                        ),
+                      ),
+                  ],
+                );
+              },
             ),
           const SizedBox(height: 24),
           Card(
@@ -393,19 +494,24 @@ class _VideoFormCheckerScreenState extends State<VideoFormCheckerScreen> {
           ? Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
-                  CircularProgressIndicator(color: Colors.blueAccent),
-                  SizedBox(height: 24),
+                children: [
+                  CircularProgressIndicator(
+                    color: Colors.blueAccent,
+                    value: _analysisProgress > 0 ? _analysisProgress : null,
+                  ),
+                  const SizedBox(height: 24),
                   Text(
-                    'Sedang menganalisis gerakan...',
-                    style: TextStyle(
+                    _analysisProgress > 0 
+                      ? 'Memproses frame: ${(_analysisProgress * 100).toInt()}%'
+                      : 'Sedang mengekstrak video...',
+                    style: const TextStyle(
                       color: Colors.white,
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  SizedBox(height: 8),
-                  Text(
+                  const SizedBox(height: 8),
+                  const Text(
                     'Proses ini membutuhkan waktu beberapa saat',
                     style: TextStyle(color: Colors.white54, fontSize: 14),
                   ),

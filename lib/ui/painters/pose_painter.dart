@@ -8,8 +8,9 @@ class PosePainter extends CustomPainter {
   final bool isGoodPosture;
   final List<Offset> trajectory;
   final SegmentationMask? mask;
+  final bool isMirrored;
 
-  PosePainter(this.pose, this.absoluteImageSize, this.isGoodPosture, [this.trajectory = const [], this.mask]);
+  PosePainter(this.pose, this.absoluteImageSize, this.isGoodPosture, [this.trajectory = const [], this.mask, this.isMirrored = true]);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -22,8 +23,11 @@ class PosePainter extends CustomPainter {
     final double scaleY = size.height / absoluteImageSize.height;
 
     Offset translate(double x, double y) {
-      // Mirroring for front camera
-      return Offset(size.width - (x * scaleX), y * scaleY);
+      if (isMirrored) {
+        return Offset(size.width - (x * scaleX), y * scaleY);
+      } else {
+        return Offset(x * scaleX, y * scaleY);
+      }
     }
 
     if (trajectory.isNotEmpty) {
@@ -90,6 +94,7 @@ class PosePainter extends CustomPainter {
     return oldDelegate.pose != pose || 
            oldDelegate.isGoodPosture != isGoodPosture ||
            oldDelegate.trajectory.length != trajectory.length ||
-           oldDelegate.mask != mask;
+           oldDelegate.mask != mask ||
+           oldDelegate.isMirrored != isMirrored;
   }
 }

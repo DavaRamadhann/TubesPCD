@@ -184,13 +184,14 @@ class SquatProvider extends ChangeNotifier {
           _currentState = SquatState.goingDown;
           _isValidRep = false;
           _status = "Turun...";
-          _isGoodPosture = false;
+          _isGoodPosture = true; // Saat turun, postur dihitung bagus (kecuali dibatalkan oleh cek postur atas)
           _phaseStartTime = DateTime.now(); // Mulai timer tempo eksentrik
           _tempoStatus = "";
         }
         break;
 
       case SquatState.goingDown:
+        _isGoodPosture = true; // Secara default hijau saat turun
         if (angle <= minAngle) {
           // Analisis Tempo Eksentrik
           if (_phaseStartTime != null) {
@@ -215,7 +216,7 @@ class SquatProvider extends ChangeNotifier {
         } else if (angle > maxAngle) {
           _currentState = SquatState.standing;
           _status = "Berdiri Tegak";
-          _isGoodPosture = false;
+          // Jika batal jongkok, kita biarkan saja (tidak dianggap bad posture, tapi batal rep)
         }
         break;
 
@@ -228,6 +229,7 @@ class SquatProvider extends ChangeNotifier {
         break;
 
       case SquatState.comingUp:
+        _isGoodPosture = true; // Secara default hijau saat naik
         if (angle > maxAngle) { 
           _currentState = SquatState.standing;
           
