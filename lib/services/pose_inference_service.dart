@@ -26,6 +26,8 @@ class PoseInferenceService {
   );
 
   bool _isProcessing = false;
+  final List<Map<PoseLandmarkType, PoseLandmark>> _previousPosesLandmarks = [];
+  final double _emaAlpha = 0.5; // 0.0 (freeze) to 1.0 (raw/no smoothing). 0.5 is a good balance.
 
   Future<InferenceResult?> processStaticImage(String filePath) async {
     if (_isProcessing) return null;
@@ -64,6 +66,50 @@ class PoseInferenceService {
       if (inputImage == null) return null;
 
       final poses = await _cameraPoseDetector.processImage(inputImage);
+      
+      // Apply EMA smoothing to the poses
+      final smoothedPoses = <Pose>[];
+      if (poses.isEmpty) {
+        _previousPosesLandmarks.clear();
+      } else {
+        for (int i = 0; i < poses.length; i++) {
+          final rawPose = poses[i];
+          if (_previousPosesLandmarks.length <= i) {
+            _previousPosesLandmarks.add(rawPose.landmarks);
+            smoothedPoses.add(rawPose);
+            continue;
+          }
+          
+          final prevLandmarks = _previousPosesLandmarks[i];
+          final smoothedLandmarks = <PoseLandmarkType, PoseLandmark>{};
+          
+          for (final entry in rawPose.landmarks.entries) {
+            final type = entry.key;
+            final rawLandmark = entry.value;
+            final prevLandmark = prevLandmarks[type];
+            
+            if (prevLandmark != null) {
+              final smoothedX = prevLandmark.x + _emaAlpha * (rawLandmark.x - prevLandmark.x);
+              final smoothedY = prevLandmark.y + _emaAlpha * (rawLandmark.y - prevLandmark.y);
+              final smoothedZ = prevLandmark.z + _emaAlpha * (rawLandmark.z - prevLandmark.z);
+              
+              smoothedLandmarks[type] = PoseLandmark(
+                type: type,
+                x: smoothedX,
+                y: smoothedY,
+                z: smoothedZ,
+                likelihood: rawLandmark.likelihood,
+              );
+            } else {
+              smoothedLandmarks[type] = rawLandmark;
+            }
+          }
+          
+          _previousPosesLandmarks[i] = smoothedLandmarks;
+          smoothedPoses.add(Pose(landmarks: smoothedLandmarks));
+        }
+      }
+      
       SegmentationMask? mask;
 
       if (enableSegmentation) {
@@ -72,7 +118,7 @@ class PoseInferenceService {
 
       final brightness = _calculateBrightness(image);
 
-      return InferenceResult(poses: poses, mask: mask, brightness: brightness);
+      return InferenceResult(poses: smoothedPoses, mask: mask, brightness: brightness);
     } finally {
       _isProcessing = false;
     }
