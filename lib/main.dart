@@ -15,7 +15,6 @@ import 'providers/jumpingjack_provider.dart';
 import 'providers/benchdips_provider.dart';
 import 'providers/plank_provider.dart';
 import 'providers/legraise_provider.dart';
-import 'ui/screens/home_screen.dart';
 import 'ui/screens/main_screen.dart';
 
 void main() async {
@@ -50,7 +49,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => LegRaiseProvider()),
       ],
       child: MaterialApp(
-        title: 'Workout Counter AI',
+        title: 'Calysc',
         theme: ThemeData(
           useMaterial3: true,
           scaffoldBackgroundColor: const Color(0xFF1B1B1B),

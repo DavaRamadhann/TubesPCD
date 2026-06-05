@@ -88,4 +88,29 @@ extension ExerciseTypeExtension on ExerciseType {
         return 'Sudut Pinggul';
     }
   }
+
+  List<Color> get gradientColors {
+    switch (this) {
+      case ExerciseType.squat:
+        return [const Color(0xFF1E3A8A), const Color(0xFF3B82F6)];
+      case ExerciseType.sitUp:
+        return [const Color(0xFF7C3AED), const Color(0xFFA78BFA)];
+      case ExerciseType.pushUp:
+        return [const Color(0xFFDC2626), const Color(0xFFF87171)];
+      case ExerciseType.shoulderTap:
+        return [const Color(0xFF059669), const Color(0xFF34D399)];
+      case ExerciseType.lunges:
+        return [const Color(0xFFD97706), const Color(0xFFFBBF24)];
+      case ExerciseType.burpees:
+        return [const Color(0xFFBE185D), const Color(0xFFF472B6)];
+      case ExerciseType.jumpingJack:
+        return [const Color(0xFF0891B2), const Color(0xFF67E8F9)];
+      case ExerciseType.benchDips:
+        return [const Color(0xFF4338CA), const Color(0xFF818CF8)];
+      case ExerciseType.plank:
+        return [const Color(0xFFB45309), const Color(0xFFFCD34D)];
+      case ExerciseType.legRaise:
+        return [const Color(0xFF065F46), const Color(0xFF6EE7B7)];
+    }
+  }
 }

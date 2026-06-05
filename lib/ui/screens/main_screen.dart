@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 
 import 'home_screen.dart';
+import 'history_screen.dart';
 import 'video_form_checker_screen.dart';
 
 class MainScreen extends StatefulWidget {
@@ -27,7 +28,8 @@ class _MainScreenState extends State<MainScreen> {
     // selalu mendapatkan status isActive terbaru (berguna untuk pause video saat pindah tab)
     final pages = [
       HomeScreen(cameras: widget.cameras),
-      VideoFormCheckerScreen(isActive: _currentIndex == 1),
+      const HistoryScreen(),
+      VideoFormCheckerScreen(isActive: _currentIndex == 2),
     ];
 
     return Scaffold(
@@ -43,12 +45,17 @@ class _MainScreenState extends State<MainScreen> {
           });
         },
         backgroundColor: const Color(0xFF1E1E1E),
-        selectedItemColor: Colors.blueAccent,
+        selectedItemColor: const Color(0xFFD95C27),
         unselectedItemColor: Colors.white54,
+        type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(
-            icon: Icon(Icons.fitness_center),
-            label: 'Logbook Latihan',
+            icon: Icon(Icons.home_rounded),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.history_rounded),
+            label: 'Riwayat',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.video_file),

@@ -25,21 +25,36 @@ class _CreateProgramScreenState extends State<CreateProgramScreen> {
   void _showExercisePicker() {
     showModalBottomSheet(
       context: context,
+      backgroundColor: const Color(0xFF1E1E1E),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
       ),
       builder: (context) {
         return SafeArea(
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 20),
+            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.white24,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
                 const Padding(
                   padding: EdgeInsets.only(bottom: 16),
                   child: Text(
-                    'Pilih Latihan',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    'PILIH GERAKAN LATIHAN',
+                    style: TextStyle(
+                      fontFamily: 'BebasNeue',
+                      fontSize: 22,
+                      letterSpacing: 1.5,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
                 Flexible(
@@ -47,22 +62,77 @@ class _CreateProgramScreenState extends State<CreateProgramScreen> {
                     shrinkWrap: true,
                     children: ExerciseType.values
                         .map(
-                          (type) => ListTile(
-                            leading: Icon(
-                              type.icon,
-                              size: 32,
-                              color: Colors.blue,
+                          (type) => Padding(
+                            padding: const EdgeInsets.only(bottom: 8.0),
+                            child: Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(12),
+                                onTap: () {
+                                  Navigator.pop(context);
+                                  _showWorkoutConfig(type);
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.03),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: Colors.white.withOpacity(0.05)),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        width: 44,
+                                        height: 44,
+                                        decoration: BoxDecoration(
+                                          gradient: LinearGradient(
+                                            colors: type.gradientColors,
+                                            begin: Alignment.topLeft,
+                                            end: Alignment.bottomRight,
+                                          ),
+                                          borderRadius: BorderRadius.circular(10),
+                                        ),
+                                        child: Icon(
+                                          type.icon,
+                                          size: 22,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 14),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              type.label.toUpperCase(),
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 14,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 3),
+                                            Text(
+                                              _exerciseDescription(type),
+                                              style: const TextStyle(
+                                                color: Colors.white38,
+                                                fontSize: 11,
+                                              ),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const Icon(
+                                        Icons.chevron_right_rounded,
+                                        color: Colors.white30,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
                             ),
-                            title: Text(
-                              type.label,
-                              style: const TextStyle(fontSize: 18),
-                            ),
-                            subtitle: Text(_exerciseDescription(type)),
-                            trailing: const Icon(Icons.chevron_right),
-                            onTap: () {
-                              Navigator.pop(context);
-                              _showWorkoutConfig(type);
-                            },
                           ),
                         )
                         .toList(),
@@ -291,39 +361,67 @@ class _CreateProgramScreenState extends State<CreateProgramScreen> {
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: _showExercisePicker,
-                    icon: const Icon(Icons.add),
+                    icon: const Icon(Icons.add_rounded, size: 18),
                     label: const Text(
                       'TAMBAH GERAKAN',
                       style: TextStyle(
                         fontFamily: 'BebasNeue',
                         letterSpacing: 1.2,
-                        fontSize: 18,
+                        fontSize: 15,
                       ),
                     ),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.blueAccent,
-                      side: const BorderSide(color: Colors.blueAccent),
-                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      foregroundColor: const Color(0xFFFF8A50),
+                      side: const BorderSide(color: Color(0xFFD95C27), width: 1.5),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                   ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 14),
                 Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: _programList.isEmpty ? null : _startProgram,
-                    icon: const Icon(Icons.play_arrow),
-                    label: const Text(
-                      'MULAI PROGRAM',
-                      style: TextStyle(
-                        fontFamily: 'BebasNeue',
-                        letterSpacing: 1.2,
-                        fontSize: 18,
-                      ),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: _programList.isEmpty 
+                          ? null 
+                          : const LinearGradient(
+                              colors: [Color(0xFFD95C27), Color(0xFFFF8A50)],
+                            ),
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: _programList.isEmpty 
+                          ? null 
+                          : [
+                              BoxShadow(
+                                color: const Color(0xFFD95C27).withOpacity(0.35),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
                     ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    child: ElevatedButton.icon(
+                      onPressed: _programList.isEmpty ? null : _startProgram,
+                      icon: const Icon(Icons.play_arrow_rounded, size: 20),
+                      label: const Text(
+                        'MULAI PROGRAM',
+                        style: TextStyle(
+                          fontFamily: 'BebasNeue',
+                          letterSpacing: 1.2,
+                          fontSize: 15,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
+                        foregroundColor: Colors.white,
+                        disabledBackgroundColor: Colors.white.withOpacity(0.06),
+                        disabledForegroundColor: Colors.white24,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
                     ),
                   ),
                 ),

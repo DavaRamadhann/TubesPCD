@@ -5,140 +5,22 @@ import '../../core/constants/exercise_type.dart';
 import '../../data/local/hive_service.dart';
 import '../../models/workout_session.dart';
 import '../../models/program_session.dart';
-import '../../models/exercise_config.dart';
 import 'camera_screen.dart';
 import 'create_program_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final List<CameraDescription> cameras;
 
-  const HomeScreen({Key? key, required this.cameras}) : super(key: key);
+  const HomeScreen({super.key, required this.cameras});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  List<dynamic> _allSessions = [];
-
   @override
   void initState() {
     super.initState();
-    _loadSessions();
-  }
-
-  void _loadSessions() {
-    setState(() {
-      final singleSessions = HiveService.getAllSessions();
-      final programSessions = HiveService.getAllProgramSessions();
-      
-      _allSessions = [...singleSessions, ...programSessions];
-      _allSessions.sort((a, b) => (b.date as DateTime).compareTo(a.date as DateTime));
-    });
-  }
-
-  ExerciseType _typeFromString(String type) {
-    switch (type) {
-      case 'sitUp':
-        return ExerciseType.sitUp;
-      case 'pushUp':
-        return ExerciseType.pushUp;
-      case 'shoulderTap':
-        return ExerciseType.shoulderTap;
-      case 'lunges':
-        return ExerciseType.lunges;
-      case 'burpees':
-        return ExerciseType.burpees;
-      case 'jumpingJack':
-        return ExerciseType.jumpingJack;
-      case 'benchDips':
-        return ExerciseType.benchDips;
-      case 'plank':
-        return ExerciseType.plank;
-      case 'legRaise':
-        return ExerciseType.legRaise;
-      default:
-        return ExerciseType.squat;
-    }
-  }
-
-  void _showExercisePicker() {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Padding(
-                  padding: EdgeInsets.only(bottom: 16),
-                  child: Text(
-                    'Pilih Latihan',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                ),
-                Flexible(
-                  child: ListView(
-                    shrinkWrap: true,
-                    children: ExerciseType.values
-                        .map(
-                          (type) => ListTile(
-                            leading: Icon(
-                              type.icon,
-                              size: 32,
-                              color: Colors.blue,
-                            ),
-                            title: Text(
-                              type.label,
-                              style: const TextStyle(fontSize: 18),
-                            ),
-                            subtitle: Text(_exerciseDescription(type)),
-                            trailing: const Icon(Icons.chevron_right),
-                            onTap: () {
-                              Navigator.pop(context);
-                              _showWorkoutConfig(type);
-                            },
-                          ),
-                        )
-                        .toList(),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  String _exerciseDescription(ExerciseType type) {
-    switch (type) {
-      case ExerciseType.squat:
-        return 'Latihan kaki — berdiri lalu jongkok';
-      case ExerciseType.sitUp:
-        return 'Latihan perut — rebahan lalu bangun';
-      case ExerciseType.pushUp:
-        return 'Latihan dada — push-up naik turun';
-      case ExerciseType.shoulderTap:
-        return 'Latihan bahu — tap bahu kanan-kiri bergantian';
-      case ExerciseType.lunges:
-        return 'Latihan kaki — melangkah dan turunkan pinggul bergantian kaki';
-      case ExerciseType.burpees:
-        return 'Latihan seluruh tubuh — turun plank lalu loncat berdiri';
-      case ExerciseType.jumpingJack:
-        return 'Latihan kardio — buka tutup kaki dan angkat tangan';
-      case ExerciseType.benchDips:
-        return 'Latihan tricep — duduk di bangku, turun naikkan badan';
-      case ExerciseType.plank:
-        return 'Latihan inti — tahan posisi badan lurus statis';
-      case ExerciseType.legRaise:
-        return 'Latihan perut — rebahan dan angkat lurus kedua kaki';
-    }
   }
 
   void _showWorkoutConfig(ExerciseType type) {
@@ -197,7 +79,6 @@ class _HomeScreenState extends State<HomeScreen> {
         exerciseType: type.name,
       );
       await HiveService.saveSession(session);
-      _loadSessions();
     }
   }
 
@@ -206,148 +87,224 @@ class _HomeScreenState extends State<HomeScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Logbook Latihan',
-          style: theme.textTheme.titleLarge?.copyWith(
-            color: Colors.white,
-            letterSpacing: 1.2,
-          ),
-        ),
-      ),
-      body: _allSessions.isEmpty
-          ? Center(
-              child: Text(
-                "Belum ada riwayat latihan.",
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: Colors.white70,
+      body: CustomScrollView(
+        slivers: [
+          // ── App Bar ──
+          SliverAppBar(
+            floating: true,
+            snap: true,
+            backgroundColor: const Color(0xFF1B1B1B),
+            elevation: 0,
+            title: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFD95C27), Color(0xFFFF8A50)],
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.fitness_center, color: Colors.white, size: 20),
                 ),
-              ),
-            )
-          : ListView.builder(
-              padding: const EdgeInsets.all(16.0),
-              itemCount: _allSessions.length,
-              itemBuilder: (context, index) {
-                final session = _allSessions[index];
-                
-                if (session is ProgramSession) {
-                  return Card(
-                    color: const Color(0xFF1E3A8A),
-                    margin: const EdgeInsets.only(bottom: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: ExpansionTile(
-                      leading: const Icon(Icons.playlist_play, color: Colors.white, size: 32),
-                      title: Text(
-                        session.name,
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                      ),
-                      subtitle: Text(
-                        "${session.date.toLocal().toString().split('.')[0]} • ${session.exercises.length} Gerakan",
-                        style: const TextStyle(color: Colors.white70),
-                      ),
-                      children: session.exercises.map((e) {
-                        final isPlank = e.exerciseType.toLowerCase() == 'plank';
-                        final targetText = isPlank 
-                            ? 'Target: ${e.targetSets} Set x ${e.targetReps} Detik'
-                            : 'Target: ${e.targetSets} Set x ${e.targetReps} Reps';
-                        final totalText = isPlank ? '${e.totalReps} Detik' : '${e.totalReps} Reps';
-                        
-                        return ListTile(
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
-                          title: Text(e.exerciseType.toUpperCase(), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-                          subtitle: Text(targetText, style: const TextStyle(color: Colors.white70)),
-                          trailing: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              const Text('Selesai:', style: TextStyle(color: Colors.white54, fontSize: 12)),
-                              Text(totalText, style: const TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold, fontSize: 16)),
-                            ],
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  );
-                } else if (session is WorkoutSession) {
-                  final exerciseType = _typeFromString(session.exerciseType);
-                  return Card(
-                    color: const Color(0xFF2C2C2C),
-                    margin: const EdgeInsets.only(bottom: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: ListTile(
-                      leading: Icon(exerciseType.icon, color: theme.colorScheme.primary),
-                      title: Text(
-                        exerciseType == ExerciseType.plank 
-                            ? "${exerciseType.label} - ${session.totalReps} Detik"
-                            : "${exerciseType.label} - ${session.totalReps} Reps",
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                      ),
-                      subtitle: Text(
-                        session.date.toLocal().toString().split('.')[0],
-                        style: const TextStyle(color: Colors.white70),
-                      ),
-                    ),
-                  );
-                }
-                return const SizedBox();
-              },
+                const SizedBox(width: 12),
+                Text(
+                  'CALYSC',
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    color: Colors.white,
+                    letterSpacing: 2.0,
+                    fontSize: 26,
+                  ),
+                ),
+              ],
             ),
-      floatingActionButton: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          FloatingActionButton.extended(
-            heroTag: "btn_program",
-            onPressed: () async {
-              final result = await Navigator.push(
-                context, 
-                MaterialPageRoute(builder: (_) => CreateProgramScreen(cameras: widget.cameras))
-              );
-              if (result != null && result is List<ProgramExerciseResult>) {
-                final session = ProgramSession(
-                  id: DateTime.now().millisecondsSinceEpoch.toString(),
-                  date: DateTime.now(),
-                  name: "Program Custom",
-                  totalDurationSeconds: 0,
-                  exercises: result,
-                );
-                await HiveService.saveProgramSession(session);
-                _loadSessions();
-              }
-            },
-            icon: const Icon(Icons.list_alt),
-            label: const Text(
-              'BUAT PROGRAM',
-              style: TextStyle(fontFamily: 'BebasNeue', letterSpacing: 1.2),
-            ),
-            backgroundColor: Colors.blueAccent,
           ),
-          const SizedBox(height: 16),
-          FloatingActionButton.extended(
-            heroTag: "btn_single",
-            onPressed: _showExercisePicker,
-            icon: const Icon(Icons.play_arrow),
-            label: const Text(
-              'LATIHAN TUNGGAL',
-              style: TextStyle(fontFamily: 'BebasNeue', letterSpacing: 1.2),
+
+          // ── Focus Area Header ──
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
+              child: Row(
+                children: [
+                  Container(
+                    width: 4,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFD95C27),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    'FOCUS AREA',
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      color: Colors.white,
+                      fontSize: 22,
+                      letterSpacing: 2.0,
+                    ),
+                  ),
+                ],
+              ),
             ),
+          ),
+
+          // ── Focus Area Grid ──
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            sliver: SliverGrid(
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                mainAxisSpacing: 12,
+                crossAxisSpacing: 12,
+                childAspectRatio: 1.3,
+              ),
+              delegate: SliverChildBuilderDelegate(
+                (context, index) {
+                  final type = ExerciseType.values[index];
+                  return _ExerciseCard(
+                    exerciseType: type,
+                    onTap: () => _showWorkoutConfig(type),
+                  );
+                },
+                childCount: ExerciseType.values.length,
+              ),
+            ),
+          ),
+
+          // ── Bottom Spacing ──
+          const SliverToBoxAdapter(
+            child: SizedBox(height: 100),
           ),
         ],
+      ),
+
+      // ── FAB: Buat Program ──
+      floatingActionButton: FloatingActionButton.extended(
+        heroTag: "btn_program",
+        onPressed: () async {
+          final result = await Navigator.push(
+            context, 
+            MaterialPageRoute(builder: (_) => CreateProgramScreen(cameras: widget.cameras))
+          );
+          if (result != null && result is List<ProgramExerciseResult>) {
+            final session = ProgramSession(
+              id: DateTime.now().millisecondsSinceEpoch.toString(),
+              date: DateTime.now(),
+              name: "Program Custom",
+              totalDurationSeconds: 0,
+              exercises: result,
+            );
+            await HiveService.saveProgramSession(session);
+          }
+        },
+        icon: const Icon(Icons.list_alt),
+        label: const Text(
+          'BUAT PROGRAM',
+          style: TextStyle(fontFamily: 'BebasNeue', letterSpacing: 1.2),
+        ),
+        backgroundColor: const Color(0xFFD95C27),
       ),
     );
   }
 }
 
+// ═══════════════════════════════════════════════════
+//  Exercise Card — Focus Area Grid Item
+// ═══════════════════════════════════════════════════
+class _ExerciseCard extends StatelessWidget {
+  final ExerciseType exerciseType;
+  final VoidCallback onTap;
+
+  const _ExerciseCard({
+    required this.exerciseType,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        splashColor: Colors.white24,
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: exerciseType.gradientColors,
+            ),
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: exerciseType.gradientColors.first.withOpacity(0.4),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Stack(
+            children: [
+              // Background icon (large, faded)
+              Positioned(
+                right: -10,
+                bottom: -10,
+                child: Icon(
+                  exerciseType.icon,
+                  size: 80,
+                  color: Colors.white.withOpacity(0.12),
+                ),
+              ),
+              // Content
+              Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(
+                        exerciseType.icon,
+                        size: 28,
+                        color: Colors.white,
+                      ),
+                    ),
+                    Text(
+                      exerciseType.label.toUpperCase(),
+                      style: const TextStyle(
+                        fontFamily: 'BebasNeue',
+                        color: Colors.white,
+                        fontSize: 20,
+                        letterSpacing: 1.5,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+
+// ═══════════════════════════════════════════════════
+//  Workout Config Bottom Sheet (unchanged logic)
+// ═══════════════════════════════════════════════════
 class _WorkoutConfigSheet extends StatefulWidget {
   final ExerciseType exerciseType;
   final Function(int reps, int sets, int rest) onStart;
 
   const _WorkoutConfigSheet({
-    super.key,
     required this.exerciseType,
     required this.onStart,
   });
