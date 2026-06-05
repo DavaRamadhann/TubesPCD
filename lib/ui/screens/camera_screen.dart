@@ -98,8 +98,8 @@ class _CameraScreenState extends State<CameraScreen> {
   }
   
   bool _enableSegmentation = false;
-  SegmentationMask? _currentMask;
-  double _brightness = 255.0;
+  final ValueNotifier<SegmentationMask?> _maskNotifier = ValueNotifier<SegmentationMask?>(null);
+  final ValueNotifier<double> _brightnessNotifier = ValueNotifier<double>(255.0);
   
   @override
   void initState() {
@@ -215,7 +215,7 @@ class _CameraScreenState extends State<CameraScreen> {
   Future<void> _initializeCamera(CameraDescription cameraDescription) async {
     _controller = CameraController(
       cameraDescription,
-      ResolutionPreset.medium,
+      ResolutionPreset.low,
       enableAudio: false,
       imageFormatGroup: Platform.isAndroid ? ImageFormatGroup.nv21 : ImageFormatGroup.bgra8888,
     );
@@ -234,10 +234,8 @@ class _CameraScreenState extends State<CameraScreen> {
         );
         
         if (result != null && mounted) {
-          setState(() {
-            _brightness = result.brightness;
-            _currentMask = result.mask;
-          });
+          _brightnessNotifier.value = result.brightness;
+          _maskNotifier.value = result.mask;
           
           if (result.poses.isNotEmpty && !_isResting && !_isTransitioning && !_isWorkoutComplete) {
             _processPose(result.poses.first);
@@ -510,6 +508,8 @@ class _CameraScreenState extends State<CameraScreen> {
     _controller?.stopImageStream();
     _controller?.dispose();
     _inferenceService.dispose();
+    _brightnessNotifier.dispose();
+    _maskNotifier.dispose();
     super.dispose();
   }
 
@@ -689,15 +689,6 @@ class _CameraScreenState extends State<CameraScreen> {
     if (_controller == null || !_controller!.value.isInitialized) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
-
-    final status = _getStatus(context);
-    final reps = _getReps(context);
-    final angle = _getAngle(context);
-    final isGoodPosture = _getIsGoodPosture(context);
-    final currentPose = _getCurrentPose(context);
-    final rom = _getRom(context);
-    final tempo = _getTempo(context);
-    final trajectory = _getTrajectory(context);
     
     final bool isPortrait = MediaQuery.of(context).orientation == Orientation.portrait;
     final Size imageSize = isPortrait
@@ -736,16 +727,27 @@ class _CameraScreenState extends State<CameraScreen> {
                 fit: StackFit.expand,
                 children: [
                   CameraPreview(_controller!),
-                  if (currentPose != null)
-                    CustomPaint(
-                      painter: PosePainter(
-                        currentPose,
-                        imageSize,
-                        isGoodPosture,
-                        trajectory,
-                        _currentMask,
-                      ),
-                    ),
+                  Builder(builder: (context) {
+                    final currentPose = _getCurrentPose(context);
+                    final isGoodPosture = _getIsGoodPosture(context);
+                    final trajectory = _getTrajectory(context);
+                    if (currentPose == null) return const SizedBox.shrink();
+                    
+                    return ValueListenableBuilder<SegmentationMask?>(
+                      valueListenable: _maskNotifier,
+                      builder: (context, mask, child) {
+                        return CustomPaint(
+                          painter: PosePainter(
+                            currentPose,
+                            imageSize,
+                            isGoodPosture,
+                            trajectory,
+                            mask,
+                          ),
+                        );
+                      },
+                    );
+                  }),
                 ],
               ),
             ),
@@ -753,7 +755,21 @@ class _CameraScreenState extends State<CameraScreen> {
           Positioned(
             top: 20,
             left: 20,
-            child: _buildOverlayUI(status, reps, angle, isGoodPosture, rom, tempo),
+            child: Builder(builder: (context) {
+              final status = _getStatus(context);
+              final reps = _getReps(context);
+              final angle = _getAngle(context);
+              final isGoodPosture = _getIsGoodPosture(context);
+              final rom = _getRom(context);
+              final tempo = _getTempo(context);
+              
+              return ValueListenableBuilder<double>(
+                valueListenable: _brightnessNotifier,
+                builder: (context, brightness, child) {
+                  return _buildOverlayUI(status, reps, angle, isGoodPosture, rom, tempo, brightness);
+                },
+              );
+            }),
           ),
           Positioned(
             bottom: 30,
@@ -941,7 +957,7 @@ class _CameraScreenState extends State<CameraScreen> {
     );
   }
 
-  Widget _buildOverlayUI(String status, int reps, double angle, bool isGoodPosture, double rom, String tempo) {
+  Widget _buildOverlayUI(String status, int reps, double angle, bool isGoodPosture, double rom, String tempo, double brightness) {
     final hasTarget = (_isProgramMode ? widget.program![_currentProgramIndex].targetReps : widget.targetReps) > 0;
     
     return Container(
@@ -954,7 +970,7 @@ class _CameraScreenState extends State<CameraScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (_brightness < 50)
+          if (brightness < 50)
             const Padding(
               padding: EdgeInsets.only(bottom: 8.0),
               child: Text("⚠️ Ruangan terlalu gelap!", style: TextStyle(color: Colors.redAccent, fontSize: 14, fontWeight: FontWeight.bold)),
